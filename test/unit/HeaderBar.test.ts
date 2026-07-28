@@ -1,16 +1,5 @@
 import assert from "assert";
-
-export interface SessionItem {
-	id: string;
-	name: string;
-	timestamp: number;
-}
-
-export function filterSessions(sessions: SessionItem[], query: string): SessionItem[] {
-	if (!query.trim()) return sessions;
-	const q = query.toLowerCase();
-	return sessions.filter((s) => s.name.toLowerCase().includes(q));
-}
+import { filterSessions, type SessionItem } from "../../src/ui/HeaderBar";
 
 describe("HeaderBar filterSessions", () => {
 	it("returns all sessions when search query is empty", () => {
