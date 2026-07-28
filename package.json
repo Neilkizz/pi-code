@@ -7,10 +7,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/earendil-works/pi-code"
+    "url": "https://github.com/Neilkizz/pi-code"
   },
   "bugs": {
-    "url": "https://github.com/earendil-works/pi-code/issues"
+    "url": "https://github.com/Neilkizz/pi-code/issues"
   },
   "homepage": "https://pi.dev",
   "engines": {
