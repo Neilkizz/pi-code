@@ -4,5 +4,6 @@ webview/out/
 *.vsix
 out/
 .vscode-test/
+.superpowers/
 *.map
 .DS_Store
