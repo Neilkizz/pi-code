@@ -1,11 +1,32 @@
 import React from "react";
 import type { DisplayMessage } from "./App";
+import { PlanReviewCard } from "./PlanReviewCard";
 
 interface Props {
 	msg: DisplayMessage;
 }
 
+/** Detect if text looks like plan markdown (task lists, plan headers, etc.). */
+function isPlanContent(text: string): boolean {
+	if (!text) return false;
+	// Plan markdown typically contains unchecked task list items or starts with a plan header
+	return /^- \[ \]/m.test(text) || /^##\s*Plan\b/m.test(text);
+}
+
 export function MessageItem({ msg }: Props) {
+	// Render PlanReviewCard when the message kind is "plan" or text looks like plan markdown
+	if ((msg as any).kind === "plan" || isPlanContent(msg.text)) {
+		return (
+			<div className={`message plan-message${msg.isStreaming ? " streaming" : ""}`}>
+				<PlanReviewCard
+					planMarkdown={msg.text}
+					onAcceptPlan={() => {}}
+					onRevisePlan={(_feedback) => {}}
+				/>
+			</div>
+		);
+	}
+
 	if (msg.kind === "compaction") {
 		return <div className="compaction-banner">{msg.text}</div>;
 	}
