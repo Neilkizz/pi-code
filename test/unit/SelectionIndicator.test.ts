@@ -1,9 +1,5 @@
 import assert from "assert";
-
-export function formatSelectionBadge(lineCount: number, visible: boolean): string {
-	if (lineCount <= 0 || !visible) return "";
-	return `${lineCount} ${lineCount === 1 ? "line" : "lines"} selected`;
-}
+import { formatSelectionBadge } from "../../src/ui/App";
 
 describe("Selection line range indicator", () => {
 	it("formats single line selection", () => {

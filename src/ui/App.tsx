@@ -145,6 +145,11 @@ export function convertAgentMessages(messages: AgentMessage[]): DisplayMessage[]
 	return next;
 }
 
+export function formatSelectionBadge(lineCount: number, visible: boolean): string {
+	if (lineCount <= 0 || !visible) return "";
+	return `${lineCount} ${lineCount === 1 ? "line" : "lines"} selected`;
+}
+
 export function App() {
 	const [_activeSessionId, setActiveSessionId] = useState<string | null>(null);
 	const activeSessionIdRef = React.useRef<string | null>(null);

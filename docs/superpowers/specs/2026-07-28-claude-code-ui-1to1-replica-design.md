@@ -1,4 +1,4 @@
-s s# Claude Code VS Code Extension 1:1 UI/UX Replica Design Spec
+# Claude Code VS Code Extension 1:1 UI/UX Replica Design Spec
 
 **Date:** 2026-07-28  
 **Status:** Approved  

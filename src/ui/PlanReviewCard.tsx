@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 
+export function formatPlanFeedback(feedback: string): string {
+	if (!feedback.trim()) return "";
+	return `Instead of the proposed plan, please do this: ${feedback.trim()}`;
+}
+
 interface PlanReviewCardProps {
 	planMarkdown: string;
 	onAcceptPlan: () => void;
