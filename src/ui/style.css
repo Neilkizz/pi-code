@@ -392,6 +392,10 @@ a:hover { text-decoration: underline; }
 	border-color: #3d404a;
 	box-shadow: none;
 }
+.claude-input-card:focus-within {
+	border-color: #e27d60;
+	box-shadow: 0 0 0 1.5px #e27d60, 0 8px 28px rgba(217, 107, 82, 0.30);
+}
 
 /* Attached file / image badges inside top of prompt box */
 .attached-files-row {
@@ -458,7 +462,8 @@ a:hover { text-decoration: underline; }
 	align-items: center;
 	justify-content: space-between;
 	margin-top: 4px;
-	padding-top: 4px;
+	padding-top: 6px;
+	border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .card-toolbar-left {
 	display: flex;
@@ -506,7 +511,7 @@ a:hover { text-decoration: underline; }
 }
 .mode-pill-btn:hover {
 	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.22);
+	border-color: #d96b52;
 	color: #fff;
 }
 .mode-pill-icon { font-size: 13px; }
@@ -660,9 +665,9 @@ a:hover { text-decoration: underline; }
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	background: rgba(0, 0, 0, 0.3);
-	padding: 4px 8px;
-	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.06);
+	padding: 3px 8px;
+	border-radius: 10px;
 }
 .effort-slider-dot {
 	width: 8px; height: 8px;
@@ -671,11 +676,11 @@ a:hover { text-decoration: underline; }
 	cursor: pointer;
 	transition: transform 0.15s, background 0.15s;
 }
-.effort-slider-dot.filled { background: #81c784; }
+.effort-slider-dot.filled { background: #d96b52; }
 .effort-slider-dot.filled.purple-dot { background: #ba68c8; }
 .effort-slider-dot.current {
 	transform: scale(1.35);
-	box-shadow: 0 0 6px rgba(129, 199, 132, 0.6);
+	box-shadow: 0 0 6px rgba(217, 107, 82, 0.6);
 }
 .effort-slider-dot.current.purple-dot {
 	box-shadow: 0 0 6px rgba(186, 104, 200, 0.8);
