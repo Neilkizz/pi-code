@@ -1,0 +1,8 @@
+node_modules/
+dist/
+webview/out/
+*.vsix
+out/
+.vscode-test/
+*.map
+.DS_Store

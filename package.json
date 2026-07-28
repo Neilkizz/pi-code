@@ -1,0 +1,495 @@
+{
+  "name": "pi-code",
+  "displayName": "Pi Code",
+  "description": "The Pi coding agent (pi.dev) in VS Code — chat, streaming, tool calls, multi-session, inline diff review.",
+  "version": "0.2.0",
+  "publisher": "earendil-works-community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/earendil-works/pi-code"
+  },
+  "bugs": {
+    "url": "https://github.com/earendil-works/pi-code/issues"
+  },
+  "homepage": "https://pi.dev",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "icon": "resources/icon.png",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCommand:pi.showChat"
+  ],
+  "scripts": {
+    "clean": "rimraf dist webview/out",
+    "build": "npm run clean && npm run build:extension && npm run build:webview",
+    "build:extension": "webpack --mode production --config webpack.config.js",
+    "build:webview": "webpack --mode production --config webview.webpack.config.js",
+    "watch:extension": "webpack --mode development --watch --config webpack.config.js",
+    "watch:webview": "webpack --mode development --watch --config webview.webpack.config.js",
+    "compile": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext ts,tsx",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "TS_NODE_PROJECT=test/tsconfig.json mocha --require ts-node/register test/unit/**/*.test.ts",
+    "test:e2e": "node test/e2e/runTest.js",
+    "smoke:rpc": "ts-node test/smoke/rpc-smoke.ts"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.4.1",
+    "css-loader": "^7.1.4",
+    "eslint": "^10.8.0",
+    "mocha": "^10.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rimraf": "^5.0.5",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "Pi Code",
+      "properties": {
+        "pi.path": {
+          "type": "string",
+          "default": "pi",
+          "description": "Path to the `pi` executable. Set to an absolute path if `pi` is not on PATH."
+        },
+        "pi.defaultProvider": {
+          "type": "string",
+          "default": "",
+          "description": "Default LLM provider (anthropic, openai, google, ...). Empty = use Pi's default."
+        },
+        "pi.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model id or pattern (provider/id). Empty = use Pi's default."
+        },
+        "pi.sessionDir": {
+          "type": "string",
+          "default": "",
+          "description": "Directory for Pi session files. Empty = Pi default (~/.pi/agent/sessions)."
+        },
+        "pi.maxConcurrentSessions": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Maximum number of concurrent Pi subprocesses (one per session tab)."
+        },
+        "pi.enableTerminalIntegration": {
+          "type": "boolean",
+          "default": false,
+          "description": "Forward bash tool output to a dedicated Pi terminal."
+        },
+        "pi.autoReconnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically restart the Pi subprocess if it crashes."
+        },
+        "pi.autosaveFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save dirty files before Pi reads or writes them."
+        },
+        "pi.respectGitIgnore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Respect .gitignore files when performing file operations."
+        },
+        "pi.enableNewConversationShortcut": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use Cmd/Ctrl+N to start a new conversation when Pi chat is focused."
+        },
+        "pi.enableReopenClosedSessionShortcut": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use Cmd/Ctrl+Shift+T to reopen the most recently closed Pi session tab."
+        },
+        "pi.hideOnboarding": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the onboarding checklist in Pi Code."
+        },
+        "pi.useCtrlEnterToSend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use Ctrl/Cmd+Enter to send prompts instead of just Enter. This allows Enter to create new lines."
+        },
+        "pi.disableLoginPrompt": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, never prompt for login/authentication."
+        },
+        "pi.permissionMode": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["off", "manual", "auto"],
+          "description": "Permission mode: 'off' = bypass all checks, 'manual' = confirm each file write/command, 'auto' = auto-allow with safety checks."
+        },
+        "pi.fileSuggestionsExclude": {
+          "type": "string",
+          "default": "",
+          "description": "Additional glob patterns to exclude from @-mention file suggestions (comma-separated)."
+        },
+        "pi.autoOpenOnEdit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-open files when Pi starts editing them (F-410). Disable to prevent file jumping during rapid edits (F-413)."
+        },
+        "pi.formatAfterEdit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the VS Code document formatter after Pi edits each file (F-409)."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "pi.showChat",
+        "title": "Show Pi Chat",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.insertAtMention",
+        "title": "Insert @ Mention",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.openWalkthrough",
+        "title": "Open Pi Walkthrough",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.askAboutSelection",
+        "title": "Ask Pi About Selection",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.selectSession",
+        "title": "Select Session",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.newSession",
+        "title": "New Pi Session",
+        "category": "Pi Code",
+        "icon": "$(add)"
+      },
+      {
+        "command": "pi.closeSession",
+        "title": "Close Pi Session",
+        "category": "Pi Code",
+        "icon": "$(close)"
+      },
+      {
+        "command": "pi.forkSession",
+        "title": "Fork Current Session",
+        "category": "Pi Code",
+        "icon": "$(git-fork)"
+      },
+      {
+        "command": "pi.abort",
+        "title": "Abort Current Turn",
+        "category": "Pi Code",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "pi.cycleModel",
+        "title": "Cycle Pi Model",
+        "category": "Pi Code",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "pi.toggleTerminal",
+        "title": "Toggle Pi Terminal",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.acceptDiff",
+        "title": "Keep Pi Edit",
+        "category": "Pi Code",
+        "icon": "$(check)"
+      },
+      {
+        "command": "pi.rejectDiff",
+        "title": "Revert Pi Edit",
+        "category": "Pi Code",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "pi.login",
+        "title": "Pi Login",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.logout",
+        "title": "Pi Logout",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.refreshAuth",
+        "title": "Refresh Pi Auth Status",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.showLogs",
+        "title": "Show Pi Logs",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.reopenSession",
+        "title": "Reopen Pi Session",
+        "category": "Pi Code",
+        "icon": "$(history)"
+      },
+      {
+        "command": "pi.focus",
+        "title": "Focus Pi Chat",
+        "category": "Pi Code"
+      },
+      {
+        "command": "pi.blur",
+        "title": "Blur Pi Chat",
+        "category": "Pi Code"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pi",
+          "title": "Pi Code",
+          "icon": "resources/icon.svg"
+        },
+        {
+          "id": "pi-sessions",
+          "title": "Pi Sessions",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "pi": [
+        {
+          "id": "piChat",
+          "name": "Chat",
+          "type": "webview"
+        }
+      ],
+      "pi-sessions": [
+        {
+          "id": "piSessions",
+          "name": "Sessions",
+          "type": "tree"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "pi.newSession",
+          "when": "view == piChat",
+          "group": "navigation@1"
+        },
+        {
+          "command": "pi.abort",
+          "when": "view == piChat",
+          "group": "navigation@2"
+        },
+        {
+          "command": "pi.cycleModel",
+          "when": "view == piChat",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "pi.acceptDiff",
+          "when": "diffEditorVisible && piDiff",
+          "group": "navigation@1"
+        },
+        {
+          "command": "pi.rejectDiff",
+          "when": "diffEditorVisible && piDiff",
+          "group": "navigation@2"
+        },
+        {
+          "command": "pi.showChat",
+          "when": "!piChatFocus",
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "pi.askAboutSelection",
+          "when": "false"
+        },
+        {
+          "command": "pi.acceptDiff",
+          "when": "false"
+        },
+        {
+          "command": "pi.rejectDiff",
+          "when": "false"
+        },
+        {
+          "command": "pi.focus",
+          "when": "false"
+        },
+        {
+          "command": "pi.blur",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+      {
+        "command": "pi.askAboutSelection",
+        "when": "editorHasSelection && !editorReadonly",
+        "group": "navigation@1"
+      }
+    ],
+    "view/item/context": [
+        {
+          "command": "pi.newSession",
+          "when": "view == piSessions",
+          "group": "inline"
+        },
+        {
+          "command": "pi.forkSession",
+          "when": "viewItem == piSession",
+          "group": "inline"
+        },
+        {
+          "command": "pi.closeSession",
+          "when": "viewItem == piSession",
+          "group": "inline"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "pi-code-walkthrough",
+        "title": "Get started with Pi Code",
+        "description": "Learn how to use Pi Code as your AI coding partner right in VS Code.",
+        "steps": [
+          {
+            "id": "welcome",
+            "title": "Your AI coding partner",
+            "description": "Pi Code brings the Pi coding agent (pi.dev) into VS Code as a native chat panel — full tool-use, streaming, multi-session conversations, and inline diff review.",
+            "media": {
+              "markdown": "resources/walkthrough/step1.md"
+            }
+          },
+          {
+            "id": "open-pi",
+            "title": "Open Pi Code",
+            "description": "Click the Pi Code icon in the activity bar, or press Cmd+Shift+Escape to open Pi Code. Use Cmd+Escape to focus the chat input from anywhere.",
+            "media": {
+              "markdown": "resources/walkthrough/step2.md"
+            },
+            "completionEvents": [
+              "onCommand:pi.showChat"
+            ]
+          },
+          {
+            "id": "chat",
+            "title": "Chat with Pi",
+            "description": "Type a message and press Enter. Ask questions, request changes, or get help understanding your code. Use @ to mention files for context, or type / for slash commands.",
+            "media": {
+              "markdown": "resources/walkthrough/step3.md"
+            }
+          },
+          {
+            "id": "sessions",
+            "title": "Multiple sessions",
+            "description": "Click New Session (+) to start a parallel session. Switch between sessions with Cmd+Shift+W to close. Each session has its own model and conversation state.",
+            "media": {
+              "markdown": "resources/walkthrough/step4.md"
+            }
+          }
+        ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "pi.showChat",
+        "key": "ctrl+shift+escape",
+        "mac": "cmd+shift+escape"
+      },
+      {
+        "command": "pi.showChat",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p"
+      },
+      {
+        "command": "pi.abort",
+        "key": "ctrl+shift+u",
+        "mac": "cmd+shift+u",
+        "when": "piChatFocus"
+      },
+      {
+        "command": "pi.closeSession",
+        "key": "ctrl+shift+w",
+        "mac": "cmd+shift+w",
+        "when": "view == piChat"
+      },
+      {
+        "command": "pi.acceptDiff",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "diffEditorVisible && piDiff"
+      },
+      {
+        "command": "pi.rejectDiff",
+        "key": "ctrl+shift+enter",
+        "mac": "cmd+shift+enter",
+        "when": "diffEditorVisible && piDiff"
+      },
+      {
+        "command": "pi.focus",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pi.insertAtMention",
+        "key": "alt+k",
+        "mac": "alt+k",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pi.blur",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "when": "!editorTextFocus && piChatFocus"
+      },
+      {
+        "command": "pi.reopenSession",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "config.pi.enableReopenClosedSessionShortcut && (view == piChat || piChatFocus)"
+      },
+      {
+        "command": "pi.newSession",
+        "key": "ctrl+n",
+        "mac": "cmd+n",
+        "when": "config.pi.enableNewConversationShortcut && piChatFocus"
+      }
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pi.dev/schemas/pi-code-configuration.json",
+  "title": "Pi Code Configuration / Pi Code 配置",
+  "description": "JSON Schema for Pi Code VS Code extension settings. / Pi Code VS Code 扩展配置项的 JSON Schema。",
+  "type": "object",
+  "properties": {
+    "pi.path": {
+      "type": "string",
+      "default": "pi",
+      "description": "Path to the `pi` executable. Set to an absolute path if `pi` is not on PATH.",
+      "description_zh": "`pi` 可执行文件的路径。如果 `pi` 不在 PATH 中，请设置为绝对路径。",
+      "examples": ["pi", "/usr/local/bin/pi", "C:\\tools\\pi.exe"]
+    },
+    "pi.defaultProvider": {
+      "type": "string",
+      "default": "",
+      "description": "Default LLM provider (anthropic, openai, google, ...). Empty = use Pi's default.",
+      "description_zh": "默认 LLM 提供商（如 anthropic、openai、google 等）。留空表示使用 Pi 的默认值。",
+      "examples": ["anthropic", "openai", "google"]
+    },
+    "pi.defaultModel": {
+      "type": "string",
+      "default": "",
+      "description": "Default model id or pattern (provider/id). Empty = use Pi's default.",
+      "description_zh": "默认模型 ID 或模式（格式为 provider/id）。留空表示使用 Pi 的默认值。",
+      "examples": ["anthropic/claude-sonnet-4-20250514", "openai/gpt-4o"]
+    },
+    "pi.sessionDir": {
+      "type": "string",
+      "default": "",
+      "description": "Directory for Pi session files. Empty = Pi default (~/.pi/agent/sessions).",
+      "description_zh": "Pi 会话文件存储目录。留空表示使用 Pi 默认路径（~/.pi/agent/sessions）。",
+      "examples": ["/path/to/sessions", "C:\\Users\\me\\.pi\\agent\\sessions"]
+    },
+    "pi.maxConcurrentSessions": {
+      "type": "number",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Maximum number of concurrent Pi subprocesses (one per session tab).",
+      "description_zh": "最大并发 Pi 子进程数（每个会话标签页对应一个进程）。"
+    },
+    "pi.enableTerminalIntegration": {
+      "type": "boolean",
+      "default": false,
+      "description": "Forward bash tool output to a dedicated Pi terminal.",
+      "description_zh": "将 bash 工具输出转发到专用的 Pi 终端。"
+    },
+    "pi.autoReconnect": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically restart the Pi subprocess if it crashes.",
+      "description_zh": "Pi 子进程崩溃时自动重启。"
+    },
+    "pi.autosaveFiles": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically save dirty files before Pi reads or writes them.",
+      "description_zh": "在 Pi 读取或写入文件前自动保存未保存的文件。"
+    },
+    "pi.respectGitIgnore": {
+      "type": "boolean",
+      "default": true,
+      "description": "Respect .gitignore files when performing file operations.",
+      "description_zh": "执行文件操作时遵守 .gitignore 规则。"
+    },
+    "pi.enableNewConversationShortcut": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use Ctrl/Cmd+N to start a new conversation when Pi chat is focused.",
+      "description_zh": "当 Pi 聊天面板获得焦点时，使用 Ctrl/Cmd+N 快捷键开始新对话。"
+    },
+    "pi.enableReopenClosedSessionShortcut": {
+      "type": "boolean",
+      "default": true,
+      "description": "Use Ctrl/Cmd+Shift+T to reopen the most recently closed Pi session tab.",
+      "description_zh": "使用 Ctrl/Cmd+Shift+T 快捷键重新打开最近关闭的 Pi 会话标签页。"
+    },
+    "pi.hideOnboarding": {
+      "type": "boolean",
+      "default": false,
+      "description": "Hide the onboarding checklist in Pi Code.",
+      "description_zh": "隐藏 Pi Code 中的新手引导清单。"
+    },
+    "pi.useCtrlEnterToSend": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use Ctrl/Cmd+Enter to send prompts instead of just Enter. This allows Enter to create new lines.",
+      "description_zh": "使用 Ctrl/Cmd+Enter 发送提示，而非仅用 Enter。这样 Enter 键可用于换行。"
+    },
+    "pi.disableLoginPrompt": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, never prompt for login/authentication.",
+      "description_zh": "设为 true 时，从不提示登录/身份验证。"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

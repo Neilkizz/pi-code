@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript compilation check
+        run: npm run compile
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Build extension and webview
+        run: npm run build
+
+      - name: Package VSIX
+        run: npx --yes @vscode/vsce package
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi-code-${{ github.ref_name }}
+          path: pi-code-*.vsix
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: pi-code-*.vsix
+          generate_release_notes: true
+
+      - name: Publish to VS Code Marketplace
+        if: env.MARKETPLACE_TOKEN != ''
+        env:
+          MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
+        run: npx --yes @vscode/vsce publish --pat "$MARKETPLACE_TOKEN"

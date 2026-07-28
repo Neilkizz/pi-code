@@ -1,0 +1,78 @@
+<h2>Claude Code VS Code 插件 1:1 复刻优化方案分析</h2>
+<p class="subtitle">对照 Anthropic 官方 Claude Code VS Code 插件与现有实现的 4 大核心视觉/交互差异</p>
+
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">核心布局与功能架构对比 (Architecture & UI Comparison)</div>
+  <div class="mockup-body">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+      <thead>
+        <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); color: #888;">
+          <th style="padding: 8px;">UI 区域 / 模块</th>
+          <th style="padding: 8px;">Anthropic 官方 Claude Code 插件</th>
+          <th style="padding: 8px;">当前 Pi Code 实现</th>
+          <th style="padding: 8px;">一比一整改方案</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 10px; font-weight: 600; color: #e27d60;">1. 顶部历史与会话栏</td>
+          <td style="padding: 10px;">包含 "Past conversations" / 历史会话切换 Tab、可视化会话列表与新建按钮。</td>
+          <td style="padding: 10px;">使用传统的工具栏 (Pi • Model • Thinking 按钮)，略显繁琐。</td>
+          <td style="padding: 10px;">移除繁重的旧工具栏，重构为顶部极简会话 Header + 可切换的 "Past Conversations" 历史记录面板。</td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 10px; font-weight: 600; color: #e27d60;">2. 选中代码与上下文指示</td>
+          <td style="padding: 10px;">选中文本时自动显示 "XX lines selected"，按 Option+K / Alt+K 插入 `@file#L10-L25` 带有行号的精确引用。</td>
+          <td style="padding: 10px;">仅支持粗粒度 @文件 匹配，无代码选择行数实时指示器及图标。</td>
+          <td style="padding: 10px;">在输入框顶部新增选中文本与附件动态 Badge 行，支持精确行号指示器 (`@file#L10-L25`)。</td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 10px; font-weight: 600; color: #e27d60;">3. 底部 Prompt 交互卡片</td>
+          <td style="padding: 10px;">陶土橘边框卡片，左下 `+` (Actions), `[/]` (Slash), 右下 `⚡ Auto` (Modes) 与 `↑` (Submit)。</td>
+          <td style="padding: 10px;">基本外观有了，但在弹窗尺寸、字体、阴影、滑块和高亮项目上仍存在微小视觉偏离。</td>
+          <td style="padding: 10px;">精细微调 CSS 尺寸、圆角 (12px)、阴影、弹窗定位与高亮颜色 (#3e432d 橄榄绿 / #ba68c8 紫色滑块点)。</td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 10px; font-weight: 600; color: #e27d60;">4. 计划模式 (Plan Mode) 交互</td>
+          <td style="padding: 10px;">切换到 Plan 模式时，自动生成完整计划并在编辑器中打开大纲/Markdown 进行确认。</td>
+          <td style="padding: 10px;">在聊天框内纯文本输出，缺乏单独的计划文档与确认按钮。</td>
+          <td style="padding: 10px;">实现 Visual Plan UI：Agent 产生 Plan 时在 UI 中渲染结构化 Plan 卡片并提供 "Accept Plan" / "Tell Claude what to do instead" 交互按钮。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h3>请选择您希望优先整改的重点方向：</h3>
+<p class="subtitle">我们可以逐项确认并重构，确保达到 100% 官方一致的 UI/UX 体验</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>全面重构输入框与弹窗样式 (Complete Prompt Card & Popups Refinement)</h3>
+      <p>将底部 Prompt 框、Modes 弹窗、Actions 弹窗、`+` / `[/]` 按钮、附件 Badge 与尺寸平滑度调整到与官方 1:1 绝对一致。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>重构顶部 Header 与历史会话 Tab (Past Conversations Tab)</h3>
+      <p>移除不必要的旧 Toolbar，新增官方风格的顶部 Header、历史会话面板 (Past conversations) 和会话切换。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>计划模式 (Plan Mode) 视觉与确认交互 (Plan Review & Approval UI)</h3>
+      <p>引入官方 Plan 模式的结构化计划卡片、"Accept Plan" 与 "Tell Claude what to do instead" 反馈框。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>精确代码选择与 @-Mention 行号指示器 (Line-Range Selection)</h3>
+      <p>实现编辑器选中文本自动显示 "XX lines selected"，支持 `@file#L10-L25` 的选择与解包支持。</p>
+    </div>
+  </div>
+</div>
