@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import { HeaderBar, type SessionItem } from "./HeaderBar";
 import { useVsCodeMessaging } from "./hooks";
 import { MessageItem } from "./Message";
 import { Toolbar } from "./Toolbar";
@@ -156,6 +157,8 @@ export function App() {
 	const [gitBranch, setGitBranch] = useState<string>("");
 	const [gitChanges, setGitChanges] = useState<string>("");
 	const [changeSummary, setChangeSummary] = useState<string>("");
+	const [sessionNameState, setSessionNameState] = useState<string>("");
+	const [sessions, setSessions] = useState<SessionItem[]>([]);
 
 	const onHostMessage = useCallback((msg: HostToWebview) => {
 		switch (msg.kind) {
@@ -183,6 +186,17 @@ export function App() {
 
 	const post = useVsCodeMessaging(onHostMessage);
 	const scrollRef = React.useRef<HTMLDivElement>(null);
+
+	const handleSelectSession = (id: string) => {
+		setActiveSessionId(id);
+		activeSessionIdRef.current = id;
+		setMessages([]);
+		post({ kind: "selectSession", sessionId: id } as any);
+	};
+
+	const handleNewSession = () => {
+		post({ kind: "newSession" } as any);
+	};
 	React.useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
 
 	const handleSend = (text: string) => {
@@ -196,6 +210,16 @@ export function App() {
 
 	return (
 		<div className="chat-container">
+			<HeaderBar
+				sessionName={sessionNameState}
+				model={model}
+				gitBranch={gitBranch}
+				gitChanges={gitChanges}
+				sessions={sessions}
+				activeSessionId={_activeSessionId}
+				onSelectSession={handleSelectSession}
+				onNewSession={handleNewSession}
+			/>
 			<Toolbar model={model} thinking={thinking} isStreaming={isStreaming}
 				onAbort={() => post({ kind: "abort" })}
 				onCycleModel={(dir) => post({ kind: "cycleModel", direction: dir })}
