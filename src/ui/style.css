@@ -426,6 +426,13 @@ a:hover { text-decoration: underline; }
 }
 .attached-file-badge .remove-badge-btn:hover { color: #f14c4c; }
 
+/* Selection line range badge */
+.selection-badge {
+	background: #2e3538;
+	border-color: #4a6b5a;
+}
+.selection-badge .file-icon { color: #4ec9b0; }
+
 /* Textarea inside prompt card */
 .claude-input-card textarea {
 	width: 100%;

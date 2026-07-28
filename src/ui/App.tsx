@@ -328,6 +328,8 @@ function InputArea({
 	const [showModesMenu, setShowModesMenu] = React.useState(false);
 	const [showActionsMenu, setShowActionsMenu] = React.useState(false);
 	const [attachedFiles, setAttachedFiles] = React.useState<AttachedFile[]>([]);
+	const [selectedLineCount, setSelectedLineCount] = React.useState(0);
+	const [selectionVisible, setSelectionVisible] = React.useState(true);
 
 	const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -493,8 +495,8 @@ function InputArea({
 					/>
 				)}
 
-				{/* Attached Files Badges */}
-				{attachedFiles.length > 0 && (
+				{/* Attached Files Badges & Selection Badge */}
+				{(attachedFiles.length > 0 || (selectedLineCount > 0 && selectionVisible)) && (
 					<div className="attached-files-row">
 						{attachedFiles.map((file, i) => (
 							<div key={i} className="attached-file-badge">
@@ -506,6 +508,20 @@ function InputArea({
 								</button>
 							</div>
 						))}
+						{selectedLineCount > 0 && selectionVisible && (
+							<div className="attached-file-badge selection-badge">
+								<span className="file-icon">📄</span>
+								<span className="file-name">{selectedLineCount} {selectedLineCount === 1 ? "line" : "lines"} selected</span>
+								<button
+									type="button"
+									className="remove-badge-btn"
+									onClick={() => setSelectionVisible(false)}
+									title="Hide selection context"
+								>
+									👁
+								</button>
+							</div>
+						)}
 					</div>
 				)}
 
