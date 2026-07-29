@@ -35,6 +35,8 @@ export class PiSession implements vscode.Disposable {
       extraArgs: [...config.extraArgs(), '--session-id', id],
       cwd: config.cwd(),
       autoReconnect: config.autoReconnect,
+      inheritEnv: config.inheritEnv,
+      env: config.extraEnv,
       log: (level, msg) => ctx.log(level, `[session ${id}] ${msg}`),
       ...clientOptions,
     });

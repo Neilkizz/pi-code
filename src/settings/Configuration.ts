@@ -129,6 +129,14 @@ export class Configuration implements vscode.Disposable {
     return this.cfg().get<boolean>('formatAfterEdit') ?? false;
   }
 
+  get inheritEnv(): boolean {
+    return this.cfg().get<boolean>('inheritEnv') ?? true;
+  }
+
+  get extraEnv(): Record<string, string> {
+    return this.cfg().get<Record<string, string>>('extraEnv') ?? {};
+  }
+
   /** Build the extra CLI args for `pi --mode rpc` from settings. */
   extraArgs(): string[] {
     const args: string[] = [];

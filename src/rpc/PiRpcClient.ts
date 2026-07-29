@@ -38,8 +38,10 @@ export interface PiRpcClientOptions {
   autoReconnect?: boolean;
   /** Max backoff between restart attempts (default 5s). */
   maxBackoffMs?: number;
-  /** Extra environment variables for the child process (deep-merged with process.env). */
+  /** Extra environment variables for the child process (deep-merged with process.env when inheritEnv is true). */
   env?: Record<string, string>;
+  /** Controls whether process.env is inherited by the child process (default true). */
+  inheritEnv?: boolean;
   /** Logger; defaults to console. */
   log?: (level: 'info' | 'warn' | 'error', msg: string) => void;
 }
@@ -85,9 +87,15 @@ export class PiEventBus {
 
 export class PiRpcClient implements vscode.Disposable {
   private opts: Required<
-    Omit<PiRpcClientOptions, 'extraArgs' | 'cwd' | 'log' | 'env' | 'skipModePrefix' | 'skipStart'>
+    Omit<
+      PiRpcClientOptions,
+      'extraArgs' | 'cwd' | 'log' | 'env' | 'skipModePrefix' | 'skipStart' | 'inheritEnv'
+    >
   > &
-    Pick<PiRpcClientOptions, 'extraArgs' | 'cwd' | 'log' | 'env' | 'skipModePrefix' | 'skipStart'>;
+    Pick<
+      PiRpcClientOptions,
+      'extraArgs' | 'cwd' | 'log' | 'env' | 'skipModePrefix' | 'skipStart' | 'inheritEnv'
+    >;
   private child: ChildProcess | null = null;
   private reader = new JsonlLineReader();
   private pending = new Map<string, PendingRequest>();
@@ -119,6 +127,7 @@ export class PiRpcClient implements vscode.Disposable {
       autoReconnect: opts.autoReconnect ?? true,
       maxBackoffMs: opts.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS,
       log: opts.log,
+      inheritEnv: opts.inheritEnv,
     };
     this.reader.onRecord((line) => this.onLine(line));
   }
@@ -143,7 +152,9 @@ export class PiRpcClient implements vscode.Disposable {
       ? [...(this.opts.extraArgs ?? [])]
       : ['--mode', 'rpc', ...(this.opts.extraArgs ?? [])];
     this.log('info', `spawning ${this.opts.executable} ${args.join(' ')}`);
-    const childEnv = this.opts.env ? { ...process.env, ...this.opts.env } : { ...process.env };
+    const childEnv = this.opts.inheritEnv !== false
+      ? { ...process.env, ...this.opts.env }
+      : { ...(this.opts.env ?? {}) };
     const child = spawn(this.opts.executable, args, {
       cwd: this.opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],

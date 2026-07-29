@@ -289,6 +289,7 @@ rl.on('line', (line: string) => {
         HOME: process.env.HOME ?? '',
         MY_CUSTOM_VAR: process.env.MY_CUSTOM_VAR ?? null,
         CUSTOM_LIST: process.env.CUSTOM_LIST ?? null,
+        TEST_PARENT_VAR: process.env.TEST_PARENT_VAR ?? null,
         inherited: true,
       },
     };
