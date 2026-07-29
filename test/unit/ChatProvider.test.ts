@@ -213,8 +213,79 @@ describe('ChatProvider dispatch', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Error paths — 3 scenarios
+  // Permission mode guard — 5 scenarios
   // -----------------------------------------------------------------------
+
+  it('readonly mode blocks prompt and shows error', async () => {
+    const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
+    const errorStub = sandbox.stub(vscode.window, 'showErrorMessage').resolves();
+
+    const readonlyCtx = createExtensionContext({ permissionMode: 'readonly' });
+    const readonlyProvider = new ChatProvider(readonlyCtx, mockSessionManager, mockDiff);
+    try {
+      const msg: WebviewToHost = { kind: 'prompt', text: 'hello', images: [] };
+      await readonlyProvider['dispatch'](msg);
+      assert.ok(errorStub.calledOnce);
+      assert.ok(errorStub.firstCall.args[0].includes('readonly'));
+      assert.ok(promptStub.notCalled);
+    } finally {
+      readonlyProvider.dispose();
+    }
+  });
+
+  it('plan mode blocks steer and shows error', async () => {
+    const steerStub = sandbox.stub(mockSession, 'steer').resolves();
+    const errorStub = sandbox.stub(vscode.window, 'showErrorMessage').resolves();
+
+    const planCtx = createExtensionContext({ permissionMode: 'plan' });
+    const planProvider = new ChatProvider(planCtx, mockSessionManager, mockDiff);
+    try {
+      const msg: WebviewToHost = { kind: 'steer', text: 'do more' };
+      await planProvider['dispatch'](msg);
+      assert.ok(errorStub.calledOnce);
+      assert.ok(errorStub.firstCall.args[0].includes('plan'));
+      assert.ok(steerStub.notCalled);
+    } finally {
+      planProvider.dispose();
+    }
+  });
+
+  it('dangerous command in auto mode shows warning and blocks when cancelled', async () => {
+    const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
+    const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
+
+    const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
+    await provider['dispatch'](msg);
+    assert.ok(warnStub.calledOnce);
+    assert.ok(warnStub.firstCall.args[0].includes('Dangerous'));
+    assert.ok(promptStub.notCalled);
+  });
+
+  it('dangerous command in bypass mode skips warning and executes', async () => {
+    const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
+    const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
+
+    const bypassCtx = createExtensionContext({ permissionMode: 'bypass' });
+    const bypassProvider = new ChatProvider(bypassCtx, mockSessionManager, mockDiff);
+    try {
+      const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
+      await bypassProvider['dispatch'](msg);
+      assert.ok(warnStub.notCalled);
+      assert.ok(promptStub.calledOnce);
+    } finally {
+      bypassProvider.dispose();
+    }
+  });
+
+  it('dangerous command proceeds when user confirms', async () => {
+    const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
+    // Return 'Execute' to simulate user clicking the confirm button
+    sandbox.stub(vscode.window, 'showWarningMessage').resolves('Execute' as any);
+
+    const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
+    await provider['dispatch'](msg);
+    assert.ok(promptStub.calledOnce);
+  });
 
   it('handles s.prompt() rejection gracefully — shows error message', async () => {
     sandbox.stub(mockSession, 'prompt').rejects(new Error('RPC timeout'));

@@ -8,6 +8,7 @@ import { decodeFromWebview, postToWebview, type WebviewToHost } from './WebviewM
 import { buildContextItems, getFileSuggestions } from './ContextBuilder';
 import { readGitStatus } from './GitStatusReader';
 import { ChangeTracker } from './ChangeTracker';
+import { classifyCommand } from '../security/commandClassifier';
 
 /**
  * ChatProvider — implements vscode.WebviewViewProvider for the side-panel
@@ -213,7 +214,31 @@ export class ChatProvider implements vscode.WebviewViewProvider {
     try {
       switch (msg.kind) {
         case 'prompt':
-        case 'steer':
+        case 'steer': {
+          // Permission mode guard (F-512).
+          const mode = this.ctx.config.permissionMode;
+          if (mode === 'readonly' || mode === 'plan') {
+            vscode.window.showErrorMessage('Pi Code: Command execution is disabled in ' + mode + ' mode.');
+            return;
+          }
+          const classification = classifyCommand(msg.text);
+          if (classification.risk === 'dangerous' && mode !== 'bypass') {
+            const confirm = await vscode.window.showWarningMessage(
+              `Pi Code: Dangerous command — ${classification.reason}`,
+              { modal: true },
+              'Execute',
+            );
+            if (!confirm) return;
+          }
+          if (classification.risk === 'sensitive' && mode === 'manual') {
+            const confirm = await vscode.window.showWarningMessage(
+              `Pi Code: Sensitive command — ${classification.reason}`,
+              { modal: true },
+              'Execute',
+            );
+            if (!confirm) return;
+          }
+
           if (this.ctx.config.autosaveFiles) {
             try {
               await vscode.workspace.saveAll(false);
@@ -232,6 +257,7 @@ export class ChatProvider implements vscode.WebviewViewProvider {
             await s.steer(msg.text);
           }
           break;
+        }
         case 'abort':
           await s.abort();
           break;

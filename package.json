@@ -150,11 +150,12 @@
           "type": "string",
           "default": "auto",
           "enum": [
-            "off",
+            "readonly",
+            "plan",
             "manual",
             "auto"
           ],
-          "description": "Permission mode: 'off' = bypass all checks, 'manual' = confirm each file write/command, 'auto' = auto-allow with safety checks."
+          "description": "Permission mode: 'readonly' (block all writes), 'plan' (read-only exploration), 'manual' (confirm each command), 'auto' (auto-allow with safety checks)."
         },
         "pi.fileSuggestionsExclude": {
           "type": "string",

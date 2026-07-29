@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type * as T from '../rpc/types';
+import { type PermissionMode } from '../types/permission';
 
 /** Strongly-typed view over the `pi.*` settings. Watches for changes. */
 export class Configuration implements vscode.Disposable {
@@ -83,8 +84,31 @@ export class Configuration implements vscode.Disposable {
     return this.cfg().get<boolean>('disableLoginPrompt') ?? false;
   }
 
-  get permissionMode(): 'off' | 'manual' | 'auto' {
-    return this.cfg().get<'off' | 'manual' | 'auto'>('permissionMode') ?? 'auto';
+  private _migrated = false;
+
+  get permissionMode(): PermissionMode {
+    const raw = this.cfg().get<string>('permissionMode');
+    if (raw === 'off') {
+      if (!this._migrated) {
+        this._migrated = true;
+        this.cfg()
+          .update('permissionMode', 'readonly', vscode.ConfigurationTarget.Global)
+          .then(undefined, () => {});
+        vscode.window.showInformationMessage(
+          "Pi Code: Permission mode 'off' renamed to 'readonly'. Migrated automatically.",
+        );
+      }
+      return 'readonly';
+    }
+    if (
+      raw === 'readonly' ||
+      raw === 'plan' ||
+      raw === 'manual' ||
+      raw === 'auto' ||
+      raw === 'bypass'
+    )
+      return raw;
+    return 'auto'; // default
   }
 
   get fileSuggestionsExclude(): string[] {
