@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { execSync } from 'child_process';
 import { Configuration } from './settings/Configuration';
 import { registerCommands } from './settings/Commands';
 import type { ExtensionContext } from './types/ExtensionContext';
@@ -47,6 +48,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Initialize workspace trust handling (S-003).
   context.subscriptions.push(handleWorkspaceTrust(ctx));
+
+  // Shell detection for KI-006 (M-5 fix): warn if unsupported shell with terminal integration enabled.
+  try {
+    const shell = execSync('echo $SHELL', { encoding: 'utf-8', timeout: 5000 }).trim().split('/').pop() || 'unknown';
+    const supportedShells = ['zsh', 'bash', 'pwsh', 'powershell'];
+    if (config.enableTerminalIntegration && !supportedShells.includes(shell)) {
+      const warningKey = 'pi.terminalShellWarningShown';
+      if (!context.globalState.get(warningKey)) {
+        void context.globalState.update(warningKey, true);
+        void vscode.window.showWarningMessage(
+          `Pi Code: Terminal integration enabled but shell "${shell}" is not fully supported. ` +
+            `Supported shells: zsh, bash, PowerShell. Disable with "pi.enableTerminalIntegration": false.`,
+        );
+      }
+      log('warn', `KI-006: Unsupported shell "${shell}". Terminal integration may not work.`);
+    }
+  } catch (err) {
+    log('warn', `Shell detection failed: ${(err as Error).message}`);
+  }
 
   const sessions = new SessionManager(ctx);
   const diff = new DiffController(ctx, sessions);
