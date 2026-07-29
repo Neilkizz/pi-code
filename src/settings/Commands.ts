@@ -184,5 +184,36 @@ export function registerCommands(
 		}),
 	);
 
+	// Plan mode CodeLens commands
+	subs.push(
+		vscode.commands.registerCommand("pi.acceptPlan", async (_uri?: vscode.Uri) => {
+			const s = sessions.active;
+			if (!s) {
+				vscode.window.showWarningMessage("No active Pi session.");
+				return;
+			}
+			chat.reveal();
+			await s.prompt("I accept this plan. Please proceed with the implementation.");
+		}),
+	);
+
+	subs.push(
+		vscode.commands.registerCommand("pi.revisePlan", async (_uri?: vscode.Uri) => {
+			const s = sessions.active;
+			if (!s) {
+				vscode.window.showWarningMessage("No active Pi session.");
+				return;
+			}
+			const feedback = await vscode.window.showInputBox({
+				title: "Revise Plan",
+				placeHolder: "Tell Pi what to do instead...",
+				prompt: "Your feedback will be sent to the active session.",
+			});
+			if (!feedback) return;
+			chat.reveal();
+			await s.prompt(`Instead of the proposed plan, please do this: ${feedback}`);
+		}),
+	);
+
 	return subs;
 }

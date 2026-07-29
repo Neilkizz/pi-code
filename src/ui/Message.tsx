@@ -4,6 +4,7 @@ import { PlanReviewCard } from "./PlanReviewCard";
 
 interface Props {
 	msg: DisplayMessage;
+	onPlanAction?: (action: "accept" | "revise", feedback?: string) => void;
 }
 
 /** Detect if text looks like plan markdown (task lists, plan headers, etc.). */
@@ -13,15 +14,15 @@ function isPlanContent(text: string): boolean {
 	return /^- \[ \]/m.test(text) || /^##\s*Plan\b/m.test(text);
 }
 
-export function MessageItem({ msg }: Props) {
+export function MessageItem({ msg, onPlanAction }: Props) {
 	// Render PlanReviewCard when the message kind is "plan" or text looks like plan markdown
 	if ((msg as any).kind === "plan" || isPlanContent(msg.text)) {
 		return (
 			<div className={`message plan-message${msg.isStreaming ? " streaming" : ""}`}>
 				<PlanReviewCard
 					planMarkdown={msg.text}
-					onAcceptPlan={() => {}}
-					onRevisePlan={(_feedback) => {}}
+					onAcceptPlan={() => onPlanAction?.("accept")}
+					onRevisePlan={(feedback) => onPlanAction?.("revise", feedback)}
 				/>
 			</div>
 		);

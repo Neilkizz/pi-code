@@ -2,6 +2,8 @@ import assert from "assert";
 import {
 	reduceMessages,
 	convertAgentMessages,
+	textFromMsg,
+	textFromResult,
 	type DisplayMessage,
 } from "../../src/ui/App";
 
@@ -206,7 +208,7 @@ describe("reduceMessages", () => {
 			type: "compaction_start",
 			reason: "manual",
 		} as CompactionStartEvent);
-		assert.ok(msgs.length <= 201, `expected ≤201, got ${msgs.length}`);
+		assert.ok(msgs.length <= 201, `expected <=201, got ${msgs.length}`);
 		assert.ok(msgs.length > 195, `expected >195, got ${msgs.length}`);
 	});
 
@@ -457,7 +459,6 @@ describe("convertAgentMessages", () => {
 				],
 			} as AssistantMessage,
 		]);
-		// Expect: assistant(textBefore) -> tool(t1) -> assistant(textMid) -> tool(t2) -> assistant(textAfter)
 		assert.strictEqual(history.length, 5);
 		assert.strictEqual(history[0].kind, "assistant");
 		assert.strictEqual(history[0].text, "Let me read the file.");
@@ -469,5 +470,77 @@ describe("convertAgentMessages", () => {
 		assert.strictEqual(history[3].toolCallId, "t2");
 		assert.strictEqual(history[4].kind, "assistant");
 		assert.strictEqual(history[4].text, "Final thoughts.");
+	});
+});
+
+describe("textFromMsg", () => {
+	it("extracts text from string content", () => {
+		const msg = { role: "user", content: "hello" } as any;
+		assert.strictEqual(textFromMsg(msg), "hello");
+	});
+
+	it("extracts text from array content", () => {
+		const msg = {
+			role: "assistant",
+			content: [{ text: "hello " }, { text: "world" }],
+		} as any;
+		assert.strictEqual(textFromMsg(msg), "hello \nworld");
+	});
+
+	it("returns empty string for unknown content shape", () => {
+		const msg = { role: "user", content: 42 } as any;
+		assert.strictEqual(textFromMsg(msg), "");
+	});
+});
+
+describe("textFromResult", () => {
+	it("returns empty string for null/undefined", () => {
+		assert.strictEqual(textFromResult(null), "");
+		assert.strictEqual(textFromResult(undefined), "");
+	});
+
+	it("returns string directly", () => {
+		assert.strictEqual(textFromResult("output"), "output");
+	});
+
+	it("extracts text from content array", () => {
+		const result = { content: [{ text: "line1\n" }, { text: "line2" }] };
+		assert.strictEqual(textFromResult(result), "line1\n\nline2");
+	});
+
+	it("stringifies non-string non-array results", () => {
+		const result = { custom: { nested: "value" } };
+		const output = textFromResult(result);
+		assert.ok(output.includes("custom"));
+		assert.ok(output.includes("value"));
+	});
+});
+
+describe("reduceMessages truncation", () => {
+	it("truncates text over 50K chars", () => {
+		const long = "x".repeat(60000);
+		const msgs = reduceMessages([], {
+			type: "message_start",
+			message: { role: "user", content: long },
+		} as MessageStartEvent);
+		assert.ok(msgs[0].text.length <= 50000 + 30);
+		assert.ok(msgs[0].text.endsWith("[...truncated at 50K chars]"));
+	});
+
+	it("truncates thinkingText over 50K chars", () => {
+		const prev: DisplayMessage[] = [
+			{ id: "1", kind: "assistant", text: "", thinkingText: "", isStreaming: true },
+		];
+		const longThinking = "y".repeat(60000);
+		const ev: MessageUpdateEvent = {
+			type: "message_update",
+			message: prev[0].message,
+			assistantMessageEvent: {
+				type: "thinking_delta",
+				delta: longThinking,
+			} as ThinkingDeltaEvent,
+		} as any;
+		const msgs = reduceMessages(prev, ev);
+		assert.ok(msgs[0].thinkingText!.length <= 50000 + 30);
 	});
 });

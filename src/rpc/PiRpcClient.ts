@@ -24,8 +24,10 @@ import type * as T from "./types";
 export interface PiRpcClientOptions {
 	/** Path to the `pi` executable (default from settings: "pi"). */
 	executable: string;
-	/** Extra args appended to `pi --mode rpc`. */
+	/** Extra args appended to `pi --mode rpc` (or to the command when skipModePrefix is true). */
 	extraArgs?: string[];
+	/** Skip the `--mode rpc` prefix. Used for non-pi subprocesses (e.g., mock server in tests). */
+	skipModePrefix?: boolean;
 	/** Cwd for the subprocess — usually the workspace folder. */
 	cwd?: string;
 	/** Per-request timeout ms (default 30s). */
@@ -34,6 +36,8 @@ export interface PiRpcClientOptions {
 	autoReconnect?: boolean;
 	/** Max backoff between restart attempts (default 5s). */
 	maxBackoffMs?: number;
+	/** Extra environment variables for the child process (deep-merged with process.env). */
+	env?: Record<string, string>;
 	/** Logger; defaults to console. */
 	log?: (level: "info" | "warn" | "error", msg: string) => void;
 }
@@ -79,9 +83,9 @@ export class PiEventBus {
 
 export class PiRpcClient implements vscode.Disposable {
 	private opts: Required<
-		Omit<PiRpcClientOptions, "extraArgs" | "cwd" | "log">
+		Omit<PiRpcClientOptions, "extraArgs" | "cwd" | "log" | "env" | "skipModePrefix">
 	> &
-		Pick<PiRpcClientOptions, "extraArgs" | "cwd" | "log">;
+		Pick<PiRpcClientOptions, "extraArgs" | "cwd" | "log" | "env" | "skipModePrefix">;
 	private child: ChildProcess | null = null;
 	private reader = new JsonlLineReader();
 	private pending = new Map<string, PendingRequest>();
@@ -105,7 +109,9 @@ export class PiRpcClient implements vscode.Disposable {
 		this.opts = {
 			executable: opts.executable || "pi",
 			extraArgs: opts.extraArgs,
+			skipModePrefix: opts.skipModePrefix ?? false,
 			cwd: opts.cwd,
+			env: opts.env,
 			requestTimeoutMs: opts.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS,
 			autoReconnect: opts.autoReconnect ?? true,
 			maxBackoffMs: opts.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS,
@@ -129,12 +135,17 @@ export class PiRpcClient implements vscode.Disposable {
 			this.restartTimer = null;
 			this.restarting = false;
 		}
-		const args = ["--mode", "rpc", ...(this.opts.extraArgs ?? [])];
+		const args = this.opts.skipModePrefix
+			? [...(this.opts.extraArgs ?? [])]
+			: ["--mode", "rpc", ...(this.opts.extraArgs ?? [])];
 		this.log("info", `spawning ${this.opts.executable} ${args.join(" ")}`);
+		const childEnv = this.opts.env
+			? { ...process.env, ...this.opts.env }
+			: { ...process.env };
 		const child = spawn(this.opts.executable, args, {
 			cwd: this.opts.cwd,
 			stdio: ["pipe", "pipe", "pipe"],
-			env: { ...process.env },
+			env: childEnv,
 		});
 		this.child = child;
 

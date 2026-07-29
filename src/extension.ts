@@ -9,6 +9,7 @@ import { AuthService } from "./auth/AuthService";
 import { DiffController } from "./diff/DiffController";
 import { PiTerminal } from "./terminal/PiTerminal";
 import { SessionTreeDataProvider } from "./view/SessionTreeProvider";
+import { registerPlanProvider } from "./view/PlanContentProvider";
 
 let disposables: vscode.Disposable[] = [];
 
@@ -77,6 +78,9 @@ export async function activate(
 			webviewOptions: { retainContextWhenHidden: true },
 		}),
 	);
+
+	// Register the plan virtual document provider + CodeLens.
+	registerPlanProvider(ctx);
 
 	// Register all commands (includes PiTerminal for toggleTerminal).
 	disposables.push(

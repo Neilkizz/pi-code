@@ -213,6 +213,14 @@ export function App() {
 		post(images ? { kind: "prompt", text: "What's in this image?", images } : { kind: "prompt", text: dirRefText });
 	};
 
+	const handlePlanAction = (action: "accept" | "revise", feedback?: string) => {
+		if (action === "accept") {
+			post({ kind: "prompt", text: "I accept this plan. Please proceed with the implementation." });
+		} else if (action === "revise" && feedback) {
+			post({ kind: "prompt", text: `Instead of the proposed plan, please do this: ${feedback}` });
+		}
+	};
+
 	return (
 		<div className="chat-container">
 			<HeaderBar
@@ -234,7 +242,7 @@ export function App() {
 				<WelcomeScreen onSend={handleSend} />
 			) : (
 				<div className="message-list" ref={scrollRef}>
-					{messages.map((m) => (<MessageItem key={m.id} msg={m} />))}
+					{messages.map((m) => (<MessageItem key={m.id} msg={m} onPlanAction={handlePlanAction} />))}
 				</div>
 			)}
 			{contextItems.length > 0 && (
