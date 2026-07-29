@@ -1,4 +1,3 @@
-import React from 'react';
 import type {
   PiEvent,
   AgentMessage,
@@ -326,11 +325,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         messages: [],
       };
     }
-    default: {
-      // The `as any` cast simulates a runtime path TypeScript normally prevents;
-      // ensures the default branch handles unexpected kind values gracefully.
+    default:
       return state;
-    }
   }
 }
 
