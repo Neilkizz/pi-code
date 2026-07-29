@@ -38,8 +38,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "TS_NODE_PROJECT=test/tsconfig.json mocha --require test/__mocks__/register.js --require ts-node/register test/unit/**/*.test.ts",
-    "test:integration": "TS_NODE_PROJECT=test/tsconfig.json mocha --timeout 15000 --require ts-node/register test/integration/**/*.test.ts",
+    "test:unit": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --require test/__mocks__/register.js --require ts-node/register test/unit/**/*.test.ts",
+    "test:integration": "cross-env TS_NODE_PROJECT=test/tsconfig.json mocha --timeout 15000 --require ts-node/register test/integration/**/*.test.ts",
     "test:coverage": "c8 npm run test:unit && c8 npm run test:integration",
     "test:e2e": "node test/e2e/runTest.js",
     "smoke:rpc": "ts-node test/smoke/rpc-smoke.ts"
@@ -52,6 +52,7 @@
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.4.1",
     "c8": "^12.0.0",
+    "cross-env": "^10.1.0",
     "css-loader": "^7.1.4",
     "eslint": "^10.8.0",
     "mocha": "^10.2.0",
