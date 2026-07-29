@@ -54,6 +54,12 @@ module.exports = {
       stat: async () => ({ mtime: Date.now() }),
     },
     asRelativePath: (uri) => (typeof uri === 'string' ? uri : uri.path || uri.fsPath || ''),
+    createFileSystemWatcher: () => ({
+      onDidCreate: () => ({ dispose: noop }),
+      onDidChange: () => ({ dispose: noop }),
+      onDidDelete: () => ({ dispose: noop }),
+      dispose: noop,
+    }),
   },
   extensions: {
     getExtension: () => null,

@@ -5,7 +5,7 @@ import type { DiffController } from '../diff/DiffController';
 import type { PiSession } from '../session/PiSession';
 import type * as T from '../rpc/types';
 import { decodeFromWebview, postToWebview, type WebviewToHost } from './WebviewMessenger';
-import { buildContextItems, getFileSuggestions } from './ContextBuilder';
+import { buildContextItems, getFileSuggestions, type FileSuggestion } from './ContextBuilder';
 import { readGitStatus } from './GitStatusReader';
 import { ChangeTracker } from './ChangeTracker';
 import { classifyCommand, type Classification } from '../security/commandClassifier';
@@ -27,6 +27,12 @@ export class ChatProvider implements vscode.WebviewViewProvider {
   private disposables: vscode.Disposable[] = [];
   private tracker = new ChangeTracker();
   private auditLog: AuditLog;
+
+  // File suggestions cache with FileSystemWatcher (Task 4.1)
+  private fileSuggestionsCache: FileSuggestion[] | null = null;
+  private fileSuggestionsCacheTime = 0;
+  private readonly FILE_SUGGESTIONS_CACHE_TTL_MS = 30_000;
+  private fileWatcher: vscode.FileSystemWatcher | null = null;
 
   private pendingConfirmation: {
     previewId: string;
@@ -100,10 +106,12 @@ export class ChatProvider implements vscode.WebviewViewProvider {
       if (webviewView.visible) void this.pushState();
     });
 
-    // Refresh file suggestions on text document and workspace folder changes.
+    // FileSystemWatcher for file suggestions (Task 4.1) - replaces onDidOpenTextDocument and onDidChangeWorkspaceFolders
+    this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/*', false, false, false);
     this.disposables.push(
-      vscode.workspace.onDidOpenTextDocument(() => void this.pushFileSuggestions()),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => void this.pushFileSuggestions()),
+      this.fileWatcher,
+      this.fileWatcher.onDidCreate(() => this.invalidateFileSuggestionsCache()),
+      this.fileWatcher.onDidDelete(() => this.invalidateFileSuggestionsCache()),
     );
 
     // Push initial state.
@@ -182,16 +190,32 @@ export class ChatProvider implements vscode.WebviewViewProvider {
   /**
    * Push workspace file suggestions to the webview for @-mention autocomplete.
    * Scans workspace files (up to 200) and open editor tabs.
+   * Uses a 30-second cache to avoid repeated findFiles scans.
    */
   private async pushFileSuggestions(): Promise<void> {
     const wv = this.webviewView;
     if (!wv) return;
+
+    // Check cache (30s TTL)
+    const now = Date.now();
+    if (this.fileSuggestionsCache && now - this.fileSuggestionsCacheTime < this.FILE_SUGGESTIONS_CACHE_TTL_MS) {
+      postToWebview(wv.webview, { kind: 'fileSuggestions', files: this.fileSuggestionsCache });
+      return;
+    }
+
     try {
       const files = await getFileSuggestions({ respectGitIgnore: this.ctx.config.respectGitIgnore });
+      this.fileSuggestionsCache = files;
+      this.fileSuggestionsCacheTime = now;
       postToWebview(wv.webview, { kind: 'fileSuggestions', files });
     } catch (err) {
       this.ctx.log('warn', `pushFileSuggestions failed: ${(err as Error).message}`);
     }
+  }
+
+  private invalidateFileSuggestionsCache(): void {
+    this.fileSuggestionsCache = null;
+    this.fileSuggestionsCacheTime = 0;
   }
 
   // ---------------------------------------------------------------------------
