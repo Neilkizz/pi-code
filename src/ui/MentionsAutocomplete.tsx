@@ -1,6 +1,15 @@
 import React, { useCallback, useState } from 'react';
 
 /**
+ * Strip null bytes and control characters from display text.
+ * React JSX auto-escapes HTML, and CSP blocks inline scripts —
+ * this is defense-in-depth for @-mention display (KI-001).
+ */
+function sanitizeDisplayText(text: string): string {
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
+
+/**
  * MentionsAutocomplete — shown when the user types `@` in the input.
  * Offers a list of files, symbols, and selections. The extension host
  * sends available paths (paths from workspace + open editors) via a
@@ -17,7 +26,8 @@ export function MentionsAutocomplete({ filter, suggestions, onPick, onClose }: P
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   const trimmed = filter.toLowerCase();
-  const items = suggestions.filter((s) => s.toLowerCase().includes(trimmed)).slice(0, 10);
+  const rawItems = suggestions.filter((s) => s.toLowerCase().includes(trimmed)).slice(0, 10);
+  const items = rawItems.map(sanitizeDisplayText);
 
   const handleKey = useCallback(
     (e: React.KeyboardEvent) => {

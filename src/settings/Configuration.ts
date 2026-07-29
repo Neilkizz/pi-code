@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type * as T from '../rpc/types';
 import { type PermissionMode } from '../types/permission';
+import { sanitizeLogMessage } from '../security/validation';
 
 /** Strongly-typed view over the `pi.*` settings. Watches for changes. */
 export class Configuration implements vscode.Disposable {
@@ -23,7 +24,7 @@ export class Configuration implements vscode.Disposable {
   }
 
   get executable(): string {
-    return this.cfg().get<string>('path') || 'pi';
+    return sanitizeLogMessage(this.cfg().get<string>('path') || 'pi');
   }
 
   get defaultProvider(): string {
@@ -39,9 +40,9 @@ export class Configuration implements vscode.Disposable {
     if (!v) return undefined;
     if (v.includes('${workspaceFolder}')) {
       const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-      return v.replace(/\$\{workspaceFolder\}/g, folder);
+      return sanitizeLogMessage(v.replace(/\$\{workspaceFolder\}/g, folder));
     }
-    return v;
+    return sanitizeLogMessage(v);
   }
 
   get maxConcurrentSessions(): number {
