@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 
 export interface ImageContent {
-  type: "image";
+  type: 'image';
   data: string; // base64-encoded
   mimeType: string; // e.g. "image/png"
 }
@@ -21,14 +21,14 @@ export interface ImageContent {
 // Commands (client -> pi stdin)
 // ---------------------------------------------------------------------------
 
-export type StreamingBehavior = "steer" | "followUp";
+export type StreamingBehavior = 'steer' | 'followUp';
 
 interface WithId {
   id?: string;
 }
 
 export interface PromptCommand extends WithId {
-  type: "prompt";
+  type: 'prompt';
   message: string;
   images?: ImageContent[];
   /** Required when the agent is already streaming. */
@@ -36,56 +36,56 @@ export interface PromptCommand extends WithId {
 }
 
 export interface SteerCommand extends WithId {
-  type: "steer";
+  type: 'steer';
   message: string;
   images?: ImageContent[];
 }
 
 export interface FollowUpCommand extends WithId {
-  type: "follow_up";
+  type: 'follow_up';
   message: string;
   images?: ImageContent[];
 }
 
 export interface AbortCommand extends WithId {
-  type: "abort";
+  type: 'abort';
 }
 
 export interface NewSessionCommand extends WithId {
-  type: "new_session";
+  type: 'new_session';
   parentSession?: string;
 }
 
 export interface GetStateCommand extends WithId {
-  type: "get_state";
+  type: 'get_state';
 }
 
 export interface GetMessagesCommand extends WithId {
-  type: "get_messages";
+  type: 'get_messages';
 }
 
 export interface SetModelCommand extends WithId {
-  type: "set_model";
+  type: 'set_model';
   provider: string;
   modelId: string;
 }
 
 export interface CycleModelCommand extends WithId {
-  type: "cycle_model";
-  direction?: "next" | "prev";
+  type: 'cycle_model';
+  direction?: 'next' | 'prev';
 }
 
 export interface GetAvailableModelsCommand extends WithId {
-  type: "get_available_models";
+  type: 'get_available_models';
 }
 
 export interface SetThinkingLevelCommand extends WithId {
-  type: "set_thinking_level";
+  type: 'set_thinking_level';
   level: ThinkingLevel;
 }
 
 export interface SetSessionNameCommand extends WithId {
-  type: "set_session_name";
+  type: 'set_session_name';
   name: string;
 }
 
@@ -109,7 +109,7 @@ export type RpcCommand =
 
 export interface RpcResponse<T = unknown> {
   id?: string;
-  type: "response";
+  type: 'response';
   command: string;
   success: boolean;
   data?: T;
@@ -120,7 +120,7 @@ export interface RpcResponse<T = unknown> {
 // Response data shapes (typed where we rely on them)
 // ---------------------------------------------------------------------------
 
-export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export type ThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 export interface ModelInfo {
   id: string;
@@ -163,52 +163,52 @@ export interface AvailableModelsData {
 // ---------------------------------------------------------------------------
 
 export interface AgentStartEvent {
-  type: "agent_start";
+  type: 'agent_start';
 }
 export interface AgentEndEvent {
-  type: "agent_end";
+  type: 'agent_end';
   messages: AgentMessage[];
 }
 export interface AgentSettledEvent {
-  type: "agent_settled";
+  type: 'agent_settled';
 }
 export interface TurnStartEvent {
-  type: "turn_start";
+  type: 'turn_start';
 }
 export interface TurnEndEvent {
-  type: "turn_end";
+  type: 'turn_end';
   message: AgentMessage;
   toolResults: ToolResultMessage[];
 }
 export interface MessageStartEvent {
-  type: "message_start";
+  type: 'message_start';
   message: AgentMessage;
 }
 export interface MessageUpdateEvent {
-  type: "message_update";
+  type: 'message_update';
   message: AgentMessage;
   assistantMessageEvent: AssistantMessageEvent;
 }
 export interface MessageEndEvent {
-  type: "message_end";
+  type: 'message_end';
   message: AgentMessage;
 }
 
 export interface ToolExecutionStartEvent {
-  type: "tool_execution_start";
+  type: 'tool_execution_start';
   toolCallId: string;
   toolName: string;
   args: any;
 }
 export interface ToolExecutionUpdateEvent {
-  type: "tool_execution_update";
+  type: 'tool_execution_update';
   toolCallId: string;
   toolName: string;
   args: any;
   partialResult: any;
 }
 export interface ToolExecutionEndEvent {
-  type: "tool_execution_end";
+  type: 'tool_execution_end';
   toolCallId: string;
   toolName: string;
   result: ToolResult;
@@ -216,41 +216,41 @@ export interface ToolExecutionEndEvent {
 }
 
 export interface QueueUpdateEvent {
-  type: "queue_update";
+  type: 'queue_update';
   steering: string[];
   followUp: string[];
 }
 export interface CompactionStartEvent {
-  type: "compaction_start";
-  reason: "manual" | "threshold" | "overflow";
+  type: 'compaction_start';
+  reason: 'manual' | 'threshold' | 'overflow';
 }
 export interface CompactionEndEvent {
-  type: "compaction_end";
-  reason: "manual" | "threshold" | "overflow";
+  type: 'compaction_end';
+  reason: 'manual' | 'threshold' | 'overflow';
   result: unknown;
   aborted: boolean;
   willRetry: boolean;
   errorMessage?: string;
 }
 export interface AutoRetryStartEvent {
-  type: "auto_retry_start";
+  type: 'auto_retry_start';
   attempt: number;
   maxAttempts: number;
   delayMs: number;
   errorMessage: string;
 }
 export interface AutoRetryEndEvent {
-  type: "auto_retry_end";
+  type: 'auto_retry_end';
   success: boolean;
   attempt: number;
   finalError?: string;
 }
 export interface ExtensionErrorEvent {
-  type: "extension_error";
+  type: 'extension_error';
   [key: string]: unknown;
 }
 export interface BashExecutionUpdateEvent {
-  type: "bash_execution_update";
+  type: 'bash_execution_update';
   /** id of the originating bash command */
   id?: string;
   /** Streamed output text from the executing bash command. */
@@ -296,17 +296,17 @@ export interface ContentBlock {
 }
 
 export interface UserMessage {
-  role: "user";
+  role: 'user';
   content: ContentBlock[] | string;
   [key: string]: unknown;
 }
 export interface AssistantMessage {
-  role: "assistant";
+  role: 'assistant';
   content: ContentBlock[];
   [key: string]: unknown;
 }
 export interface ToolResultMessage {
-  role: "toolResult";
+  role: 'toolResult';
   toolCallId: string;
   toolName: string;
   content: ContentBlock[];
@@ -323,7 +323,7 @@ export interface ToolResultMessage {
   [key: string]: unknown;
 }
 export interface BashExecutionMessage {
-  role: "bashExecution";
+  role: 'bashExecution';
   [key: string]: unknown;
 }
 export interface CustomMessage {
@@ -331,11 +331,11 @@ export interface CustomMessage {
   [key: string]: unknown;
 }
 export interface BranchSummaryMessage {
-  role: "branchSummary";
+  role: 'branchSummary';
   [key: string]: unknown;
 }
 export interface CompactionSummaryMessage {
-  role: "compactionSummary";
+  role: 'compactionSummary';
   [key: string]: unknown;
 }
 export type AgentMessage =
@@ -352,17 +352,15 @@ export type AgentMessage =
 // ---------------------------------------------------------------------------
 
 export interface TextDeltaEvent {
-  type: "text_delta";
+  type: 'text_delta';
   delta: string;
 }
 export interface ThinkingDeltaEvent {
-  type: "thinking_delta";
+  type: 'thinking_delta';
   delta: string;
 }
 export type AssistantMessageEvent =
-  | TextDeltaEvent
-  | ThinkingDeltaEvent
-  | ({ type: string } & Record<string, unknown>);
+  TextDeltaEvent | ThinkingDeltaEvent | ({ type: string } & Record<string, unknown>);
 
 // ---------------------------------------------------------------------------
 // Tool result details

@@ -30,11 +30,11 @@ export class RequestQueue {
     return this.items.length;
   }
 
-  enqueue<T>(req: Omit<QueuedRequest<T>, "queuedAt">): void {
+  enqueue<T>(req: Omit<QueuedRequest<T>, 'queuedAt'>): void {
     if (this.items.length >= this.maxSize) {
       // Drop oldest first — it's the least likely to still be relevant.
       const dropped = this.items.shift()!;
-      dropped.reject(new Error("Request queue full — request dropped"));
+      dropped.reject(new Error('Request queue full — request dropped'));
     }
     this.items.push({ ...(req as QueuedRequest), queuedAt: Date.now() });
   }

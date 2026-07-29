@@ -1,7 +1,7 @@
-import * as vscode from "vscode";
-import type { ExtensionContext } from "../types/ExtensionContext";
-import type { SessionManager } from "../session/SessionManager";
-import * as T from "../rpc/types";
+import * as vscode from 'vscode';
+import type { ExtensionContext } from '../types/ExtensionContext';
+import type { SessionManager } from '../session/SessionManager';
+import * as T from '../rpc/types';
 
 /**
  * PiTerminal — optional integration. Creates a VS Code terminal running the
@@ -32,7 +32,7 @@ export class PiTerminal implements vscode.Disposable {
   show(): void {
     if (!this.terminal) {
       this.terminal = vscode.window.createTerminal({
-        name: "Pi",
+        name: 'Pi',
         cwd: this.ctx.config.cwd(),
       });
       this.terminal.sendText(`${this.ctx.config.executable}\n`);
@@ -59,20 +59,18 @@ export class PiTerminal implements vscode.Disposable {
 
   private onEvent(_sessionId: string, e: T.PiEvent): void {
     // Forward streaming bash tool output to the terminal for live observability.
-    if (e.type === "tool_execution_update") {
+    if (e.type === 'tool_execution_update') {
       const update = e as T.ToolExecutionUpdateEvent;
-      if (update.toolName !== "bash") return;
+      if (update.toolName !== 'bash') return;
       const text = this.extractText(update.partialResult);
       if (text && this.terminal) {
         this.terminal.sendText(text, true);
       }
     }
     // Handle dedicated bash_execution_update events if Pi emits them.
-    if (e.type === "bash_execution_update") {
+    if (e.type === 'bash_execution_update') {
       const bash = e as T.BashExecutionUpdateEvent;
-      const text = typeof bash.output === "string"
-        ? bash.output
-        : this.extractText(bash);
+      const text = typeof bash.output === 'string' ? bash.output : this.extractText(bash);
       if (text && this.terminal) {
         this.terminal.sendText(text, true);
       }
@@ -81,11 +79,11 @@ export class PiTerminal implements vscode.Disposable {
 
   private extractText(partial: any): string | undefined {
     if (!partial) return undefined;
-    if (typeof partial === "string") return partial;
+    if (typeof partial === 'string') return partial;
     if (Array.isArray(partial?.content)) {
       return partial.content
-        .map((c: any) => (typeof c?.text === "string" ? c.text : ""))
-        .join("\n");
+        .map((c: any) => (typeof c?.text === 'string' ? c.text : ''))
+        .join('\n');
     }
     return undefined;
   }

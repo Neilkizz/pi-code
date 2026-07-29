@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState } from 'react';
 
 /**
  * MentionsAutocomplete — shown when the user types `@` in the input.
@@ -17,21 +17,19 @@ export function MentionsAutocomplete({ filter, suggestions, onPick, onClose }: P
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   const trimmed = filter.toLowerCase();
-  const items = suggestions
-    .filter((s) => s.toLowerCase().includes(trimmed))
-    .slice(0, 10);
+  const items = suggestions.filter((s) => s.toLowerCase().includes(trimmed)).slice(0, 10);
 
   const handleKey = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === "ArrowDown") {
+      } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIdx((i) => Math.min(i + 1, items.length - 1));
-      } else if (e.key === "ArrowUp") {
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIdx((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && items.length > 0) {
+      } else if (e.key === 'Enter' && items.length > 0) {
         onPick(items[selectedIdx]);
       }
     },
@@ -41,7 +39,7 @@ export function MentionsAutocomplete({ filter, suggestions, onPick, onClose }: P
   if (items.length === 0) {
     return (
       <div className="autocomplete-popup" onKeyDown={handleKey}>
-        <div className="autocomplete-item" style={{ color: "var(--text-muted)" }}>
+        <div className="autocomplete-item" style={{ color: 'var(--text-muted)' }}>
           No matching files
         </div>
       </div>
@@ -53,7 +51,7 @@ export function MentionsAutocomplete({ filter, suggestions, onPick, onClose }: P
       {items.map((item, idx) => (
         <div
           key={item}
-          className={`autocomplete-item${idx === selectedIdx ? " selected" : ""}`}
+          className={`autocomplete-item${idx === selectedIdx ? ' selected' : ''}`}
           onClick={() => onPick(item)}
         >
           <span>{item}</span>
