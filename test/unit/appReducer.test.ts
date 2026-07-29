@@ -7,7 +7,19 @@ import {
   reduceMessages,
   convertAgentMessages,
 } from '../../src/ui/AppState';
-import type { PiEvent, AgentMessage, MessageStartEvent, MessageUpdateEvent, MessageEndEvent, ToolExecutionStartEvent, ToolExecutionUpdateEvent, ToolExecutionEndEvent, CompactionStartEvent, TextDeltaEvent, ThinkingDeltaEvent } from '../../src/rpc/types';
+import type {
+  PiEvent,
+  AgentMessage,
+  MessageStartEvent,
+  MessageUpdateEvent,
+  MessageEndEvent,
+  ToolExecutionStartEvent,
+  ToolExecutionUpdateEvent,
+  ToolExecutionEndEvent,
+  CompactionStartEvent,
+  TextDeltaEvent,
+  ThinkingDeltaEvent,
+} from '../../src/rpc/types';
 
 describe('appReducer', () => {
   it('initial state is correct', () => {
@@ -123,9 +135,7 @@ describe('appReducer', () => {
   });
 
   it('history with different sessionId returns state unchanged', () => {
-    const messages: AgentMessage[] = [
-      { role: 'user', content: 'hello' } as any,
-    ];
+    const messages: AgentMessage[] = [{ role: 'user', content: 'hello' } as any];
     const action: AppAction = { kind: 'history', sessionId: 's2', messages };
     const state = appReducer({ ...initialState, activeSessionId: 's1' }, action);
     assert.deepStrictEqual(state.messages, []);
@@ -162,13 +172,22 @@ describe('appReducer', () => {
   });
 
   it('contextUpdate updates contextItems from labels', () => {
-    const action: AppAction = { kind: 'contextUpdate', items: [{ label: 'file1.ts' }, { label: 'file2.ts' }] };
+    const action: AppAction = {
+      kind: 'contextUpdate',
+      items: [{ label: 'file1.ts' }, { label: 'file2.ts' }],
+    };
     const state = appReducer(initialState, action);
     assert.deepStrictEqual(state.contextItems, ['file1.ts', 'file2.ts']);
   });
 
   it('gitStatus updates branch and changes string', () => {
-    const action: AppAction = { kind: 'gitStatus', branch: 'main', added: 5, deleted: 2, modified: 3 };
+    const action: AppAction = {
+      kind: 'gitStatus',
+      branch: 'main',
+      added: 5,
+      deleted: 2,
+      modified: 3,
+    };
     const state = appReducer(initialState, action);
     assert.strictEqual(state.gitBranch, 'main');
     assert.strictEqual(state.gitChanges, '+5/-2 ~3');
@@ -250,7 +269,13 @@ describe('appReducer', () => {
     assert.deepStrictEqual(state.suggestions, ['src/foo.ts']);
 
     // gitStatus
-    state = appReducer(state, { kind: 'gitStatus', branch: 'main', added: 1, deleted: 0, modified: 2 });
+    state = appReducer(state, {
+      kind: 'gitStatus',
+      branch: 'main',
+      added: 1,
+      deleted: 0,
+      modified: 2,
+    });
     assert.strictEqual(state.gitBranch, 'main');
     assert.strictEqual(state.gitChanges, '+1/-0 ~2');
   });

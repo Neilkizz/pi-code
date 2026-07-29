@@ -163,7 +163,9 @@ describe('Phase 3 Integration: Command Classification, Preview, and Audit Flow',
     await new Promise((r) => setTimeout(r, 5));
 
     // Check that commandPreview was posted
-    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    const previewCall = mockWebview.postMessage
+      .getCalls()
+      .find((c: any) => c.args[0]?.kind === 'commandPreview');
     assert.ok(previewCall);
     const pid = previewCall.args[0].previewId;
 
@@ -192,7 +194,9 @@ describe('Phase 3 Integration: Command Classification, Preview, and Audit Flow',
 
     await new Promise((r) => setTimeout(r, 5));
 
-    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    const previewCall = mockWebview.postMessage
+      .getCalls()
+      .find((c: any) => c.args[0]?.kind === 'commandPreview');
     assert.ok(previewCall);
     const pid = previewCall.args[0].previewId;
 
@@ -230,7 +234,10 @@ describe('Phase 3 Integration: Command Classification, Preview, and Audit Flow',
       assert.ok(promptStub.notCalled);
 
       // Verify no audit log exists on disk
-      const auditFile = path.join(readonlyCtx.vscodeContext.globalStorageUri!.fsPath, 'audit.jsonl');
+      const auditFile = path.join(
+        readonlyCtx.vscodeContext.globalStorageUri!.fsPath,
+        'audit.jsonl',
+      );
       assert.ok(!fs.existsSync(auditFile));
     } finally {
       readonlyProvider.dispose();

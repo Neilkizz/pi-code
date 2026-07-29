@@ -46,7 +46,10 @@ export function App() {
         case 'fileSuggestions':
           return { kind: 'fileSuggestions', files: msg.files.map((f) => f.path) };
         case 'modelList':
-          return { kind: 'modelList', models: msg.models.map((m) => ({ provider: m.provider, id: m.id })) };
+          return {
+            kind: 'modelList',
+            models: msg.models.map((m) => ({ provider: m.provider, id: m.id })),
+          };
         case 'contextUpdate':
           return { kind: 'contextUpdate', items: msg.items.map((i) => ({ label: i.label })) };
         case 'gitStatus':
@@ -206,4 +209,11 @@ export function App() {
 }
 
 // Re-export for backward compatibility with tests that import from App.tsx
-export { DisplayMessage, reduceMessages, convertAgentMessages, textFromMsg, textFromResult, formatSelectionBadge } from './AppState';
+export {
+  DisplayMessage,
+  reduceMessages,
+  convertAgentMessages,
+  textFromMsg,
+  textFromResult,
+  formatSelectionBadge,
+} from './AppState';

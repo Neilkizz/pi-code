@@ -159,10 +159,7 @@ describe('PiRpcClient event streams (integration)', () => {
     const msgUpdate = received[2] as T.MessageUpdateEvent;
     assert.strictEqual(msgUpdate.type, 'message_update');
     assert.strictEqual(msgUpdate.assistantMessageEvent.type, 'text_delta');
-    assert.strictEqual(
-      (msgUpdate.assistantMessageEvent as T.TextDeltaEvent).delta,
-      'Hello',
-    );
+    assert.strictEqual((msgUpdate.assistantMessageEvent as T.TextDeltaEvent).delta, 'Hello');
 
     const msgEnd = received[3] as T.MessageEndEvent;
     assert.strictEqual(msgEnd.type, 'message_end');

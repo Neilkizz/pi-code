@@ -106,10 +106,18 @@ describe('AuditLog', () => {
       assert.ok(fs.existsSync(logPath));
 
       // Second record (~125 bytes) — total file size now ~230 bytes
-      logger.record({ kind: 'command', detail: 'another command that is slightly longer', authorized: true });
+      logger.record({
+        kind: 'command',
+        detail: 'another command that is slightly longer',
+        authorized: true,
+      });
 
       // Third record — total file size will now grow past 250 to ~360 bytes
-      logger.record({ kind: 'command', detail: 'this one will definitely exceed 250 bytes total file size', authorized: true });
+      logger.record({
+        kind: 'command',
+        detail: 'this one will definitely exceed 250 bytes total file size',
+        authorized: true,
+      });
 
       // Fourth record triggers rotation because previous write made size ~360 (which is > 250)
       logger.record({ kind: 'command', detail: 'triggering rotation now', authorized: true });
@@ -132,7 +140,7 @@ describe('AuditLog', () => {
     const logPath = path.join(testDir, 'audit.jsonl');
     try {
       (logger as any).MAX_FILE_SIZE = 10; // Extremely small to force rotation every time
-      (logger as any).MAX_ARCHIVES = 2;   // Only keep audit.1 and audit.2
+      (logger as any).MAX_ARCHIVES = 2; // Only keep audit.1 and audit.2
 
       for (let i = 0; i < 5; i++) {
         logger.record({ kind: 'command', detail: `c-${i}`, authorized: true });
@@ -142,7 +150,10 @@ describe('AuditLog', () => {
       assert.ok(fs.existsSync(logPath));
       assert.ok(fs.existsSync(path.join(testDir, 'audit.1.jsonl')));
       assert.ok(fs.existsSync(path.join(testDir, 'audit.2.jsonl')));
-      assert.ok(!fs.existsSync(path.join(testDir, 'audit.3.jsonl')), 'audit.3.jsonl should have been cleaned up/not created');
+      assert.ok(
+        !fs.existsSync(path.join(testDir, 'audit.3.jsonl')),
+        'audit.3.jsonl should have been cleaned up/not created',
+      );
     } finally {
       logger.dispose();
     }

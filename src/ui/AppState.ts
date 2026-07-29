@@ -212,7 +212,15 @@ export function formatSelectionBadge(lineCount: number, visible: boolean): strin
 
 export type AppAction =
   | { kind: 'piEvent'; sessionId: string; event: PiEvent }
-  | { kind: 'stateSnapshot'; sessionId: string; model: string; thinkingLevel: string; isStreaming: boolean; sessionName: string; messageCount: number }
+  | {
+      kind: 'stateSnapshot';
+      sessionId: string;
+      model: string;
+      thinkingLevel: string;
+      isStreaming: boolean;
+      sessionName: string;
+      messageCount: number;
+    }
   | { kind: 'history'; sessionId: string; messages: AgentMessage[] }
   | { kind: 'fileSuggestions'; files: string[] }
   | { kind: 'modelList'; models: { provider: string; id: string }[] }
@@ -220,7 +228,13 @@ export type AppAction =
   | { kind: 'gitStatus'; branch: string; added: number; deleted: number; modified: number }
   | { kind: 'changeSummary'; summary: string }
   | { kind: 'selectSession'; sessionId: string }
-  | { kind: 'commandPreview'; command: string; risk: 'safe' | 'sensitive' | 'dangerous'; reason?: string; previewId: string }
+  | {
+      kind: 'commandPreview';
+      command: string;
+      risk: 'safe' | 'sensitive' | 'dangerous';
+      reason?: string;
+      previewId: string;
+    }
   | { kind: 'clearPreview' };
 
 export interface AppState {
@@ -358,5 +372,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 }
 
 // Re-export types for backward compatibility with tests during transition
-export type { PiEvent, AgentMessage, MessageStartEvent, MessageUpdateEvent, MessageEndEvent, ToolExecutionStartEvent, ToolExecutionUpdateEvent, ToolExecutionEndEvent, CompactionStartEvent, CompactionEndEvent, ToolResultMessage, AssistantMessageEvent, TextDeltaEvent, ThinkingDeltaEvent } from '../rpc/types';
+export type {
+  PiEvent,
+  AgentMessage,
+  MessageStartEvent,
+  MessageUpdateEvent,
+  MessageEndEvent,
+  ToolExecutionStartEvent,
+  ToolExecutionUpdateEvent,
+  ToolExecutionEndEvent,
+  CompactionStartEvent,
+  CompactionEndEvent,
+  ToolResultMessage,
+  AssistantMessageEvent,
+  TextDeltaEvent,
+  ThinkingDeltaEvent,
+} from '../rpc/types';
 export type { SessionItem } from './HeaderBar';

@@ -152,9 +152,10 @@ export class PiRpcClient implements vscode.Disposable {
       ? [...(this.opts.extraArgs ?? [])]
       : ['--mode', 'rpc', ...(this.opts.extraArgs ?? [])];
     this.log('info', `spawning ${this.opts.executable} ${args.join(' ')}`);
-    const childEnv = this.opts.inheritEnv !== false
-      ? { ...process.env, ...this.opts.env }
-      : { ...(this.opts.env ?? {}) };
+    const childEnv =
+      this.opts.inheritEnv !== false
+        ? { ...process.env, ...this.opts.env }
+        : { ...(this.opts.env ?? {}) };
     const child = spawn(this.opts.executable, args, {
       cwd: this.opts.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],

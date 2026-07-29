@@ -73,9 +73,9 @@ export async function buildContextItems(): Promise<ContextItem[]> {
  * Scan workspace files (up to 200) and open editor tabs for file suggestions
  * shown in the webview @-mention autocomplete.
  */
-export async function getFileSuggestions(
-  config: { respectGitIgnore: boolean },
-): Promise<FileSuggestion[]> {
+export async function getFileSuggestions(config: {
+  respectGitIgnore: boolean;
+}): Promise<FileSuggestion[]> {
   const excludePattern = config.respectGitIgnore
     ? '{**/node_modules/**,**/.git/**,**/dist/**,**/build/**,**/__pycache__/**,**/.env*}'
     : undefined;

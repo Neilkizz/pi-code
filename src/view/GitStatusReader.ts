@@ -30,17 +30,10 @@ export async function readGitStatus(): Promise<GitStatus | null> {
     if (!repo) return null;
     const state = repo.state;
     return {
-      branch:
-        state.HEAD?.name ?? state.HEAD?.commit?.slice(0, 7) ?? 'detached',
-      modified: state.workingTreeChanges.filter(
-        (c: any) => c.status === 1,
-      ).length,
-      added: state.workingTreeChanges.filter(
-        (c: any) => c.status === 7 || c.status === 5,
-      ).length,
-      deleted: state.workingTreeChanges.filter(
-        (c: any) => c.status === 3,
-      ).length,
+      branch: state.HEAD?.name ?? state.HEAD?.commit?.slice(0, 7) ?? 'detached',
+      modified: state.workingTreeChanges.filter((c: any) => c.status === 1).length,
+      added: state.workingTreeChanges.filter((c: any) => c.status === 7 || c.status === 5).length,
+      deleted: state.workingTreeChanges.filter((c: any) => c.status === 3).length,
       ahead: state.HEAD?.ahead ?? 0,
       behind: state.HEAD?.behind ?? 0,
     };

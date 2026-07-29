@@ -403,16 +403,15 @@ rl.on('line', (line: string) => {
       writeLine(JSON.stringify(makeResponse(id, type)));
       return;
 
-    case 'u2028-test':
-      {
-        const data = {
-          text: 'Line Separator Paragraph',
-          summary: 'Contains U+2028 and U+2029',
-        };
-        const resp = { id, type: 'response', command: type, success: true, data };
-        writeLine(JSON.stringify(resp));
-        return;
-      }
+    case 'u2028-test': {
+      const data = {
+        text: 'Line Separator Paragraph',
+        summary: 'Contains U+2028 and U+2029',
+      };
+      const resp = { id, type: 'response', command: type, success: true, data };
+      writeLine(JSON.stringify(resp));
+      return;
+    }
 
     default:
       // "echo" — respond immediately

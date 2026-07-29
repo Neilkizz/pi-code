@@ -7,11 +7,7 @@ function makeCtx(): ExtensionContext {
     config: {
       executable: 'node',
       // We point extraArgs to mockRpcServer.ts using ts-node
-      extraArgs: () => [
-        '-r',
-        'ts-node/register',
-        'test/integration/mockRpcServer.ts',
-      ],
+      extraArgs: () => ['-r', 'ts-node/register', 'test/integration/mockRpcServer.ts'],
       cwd: () => process.cwd(),
       autoReconnect: false,
     } as any,

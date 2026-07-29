@@ -27,8 +27,7 @@ export class ChangeTracker {
   recordEvent(e: T.ToolExecutionEndEvent): void {
     if (e.toolName !== 'edit' && e.toolName !== 'write') return;
     const details = (e.result?.details ?? {}) as Record<string, unknown>;
-    const filePath =
-      typeof details === 'object' ? ((details as any)?.file_path ?? '') : '';
+    const filePath = typeof details === 'object' ? ((details as any)?.file_path ?? '') : '';
     if (!filePath) return;
     const diff = details.diff as string | undefined;
     if (!diff) return;
@@ -39,8 +38,7 @@ export class ChangeTracker {
       if (line.startsWith('+') && !line.startsWith('+++')) added++;
       if (line.startsWith('-') && !line.startsWith('---')) removed++;
     }
-    const action =
-      details.created ? 'create' : ('modify' as const);
+    const action = details.created ? 'create' : ('modify' as const);
     this.changes.push({ file: filePath, action, added, removed });
   }
 

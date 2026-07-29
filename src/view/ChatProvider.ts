@@ -179,7 +179,8 @@ export class ChatProvider implements vscode.WebviewViewProvider {
     }
     // Fire-and-forget supplementary status pushes.
     void buildContextItems().then((items) => {
-      if (this.webviewView) postToWebview(this.webviewView.webview, { kind: 'contextUpdate', items });
+      if (this.webviewView)
+        postToWebview(this.webviewView.webview, { kind: 'contextUpdate', items });
     });
     void readGitStatus().then((gitStatus) => {
       if (this.webviewView && gitStatus)
@@ -198,13 +199,18 @@ export class ChatProvider implements vscode.WebviewViewProvider {
 
     // Check cache (30s TTL)
     const now = Date.now();
-    if (this.fileSuggestionsCache && now - this.fileSuggestionsCacheTime < this.FILE_SUGGESTIONS_CACHE_TTL_MS) {
+    if (
+      this.fileSuggestionsCache &&
+      now - this.fileSuggestionsCacheTime < this.FILE_SUGGESTIONS_CACHE_TTL_MS
+    ) {
       postToWebview(wv.webview, { kind: 'fileSuggestions', files: this.fileSuggestionsCache });
       return;
     }
 
     try {
-      const files = await getFileSuggestions({ respectGitIgnore: this.ctx.config.respectGitIgnore });
+      const files = await getFileSuggestions({
+        respectGitIgnore: this.ctx.config.respectGitIgnore,
+      });
       this.fileSuggestionsCache = files;
       this.fileSuggestionsCacheTime = now;
       postToWebview(wv.webview, { kind: 'fileSuggestions', files });
@@ -273,7 +279,9 @@ export class ChatProvider implements vscode.WebviewViewProvider {
           // Permission mode guard (F-512).
           const mode = this.ctx.config.permissionMode;
           if (mode === 'readonly' || mode === 'plan') {
-            vscode.window.showErrorMessage('Pi Code: Command execution is disabled in ' + mode + ' mode.');
+            vscode.window.showErrorMessage(
+              'Pi Code: Command execution is disabled in ' + mode + ' mode.',
+            );
             return;
           }
           const classification = classifyCommand(msg.text);

@@ -160,7 +160,11 @@ describe('ChatProvider dispatch', () => {
 
   it('setModel calls s.setModel() with provider/modelId', async () => {
     const stub = sandbox.stub(mockSession, 'setModel').resolves();
-    const msg: WebviewToHost = { kind: 'setModel', provider: 'anthropic', modelId: 'claude-sonnet-4' };
+    const msg: WebviewToHost = {
+      kind: 'setModel',
+      provider: 'anthropic',
+      modelId: 'claude-sonnet-4',
+    };
     await provider['dispatch'](msg);
     assert.ok(stub.calledOnceWith('anthropic', 'claude-sonnet-4'));
   });
@@ -279,12 +283,18 @@ describe('ChatProvider dispatch', () => {
   it('dangerous command in auto mode shows warning and blocks when cancelled', async () => {
     const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
 
-    const dispatchPromise = provider['dispatch']({ kind: 'prompt', text: 'sudo rm -rf /', images: [] });
+    const dispatchPromise = provider['dispatch']({
+      kind: 'prompt',
+      text: 'sudo rm -rf /',
+      images: [],
+    });
 
     // Wait a tiny tick for commandPreview to be posted
     await new Promise((r) => setTimeout(r, 5));
 
-    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    const previewCall = mockWebview.postMessage
+      .getCalls()
+      .find((c: any) => c.args[0]?.kind === 'commandPreview');
     assert.ok(previewCall, 'commandPreview should be posted');
     const sentMsg = previewCall.args[0];
     assert.strictEqual(sentMsg.risk, 'dangerous');
@@ -315,11 +325,17 @@ describe('ChatProvider dispatch', () => {
   it('dangerous command proceeds when user confirms', async () => {
     const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
 
-    const dispatchPromise = provider['dispatch']({ kind: 'prompt', text: 'sudo rm -rf /', images: [] });
+    const dispatchPromise = provider['dispatch']({
+      kind: 'prompt',
+      text: 'sudo rm -rf /',
+      images: [],
+    });
 
     await new Promise((r) => setTimeout(r, 5));
 
-    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    const previewCall = mockWebview.postMessage
+      .getCalls()
+      .find((c: any) => c.args[0]?.kind === 'commandPreview');
     assert.ok(previewCall, 'commandPreview should be posted');
     const sentMsg = previewCall.args[0];
     const pid = sentMsg.previewId;

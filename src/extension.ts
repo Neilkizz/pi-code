@@ -51,7 +51,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Shell detection for KI-006 (M-5 fix): warn if unsupported shell with terminal integration enabled.
   try {
-    const shell = execSync('echo $SHELL', { encoding: 'utf-8', timeout: 5000 }).trim().split('/').pop() || 'unknown';
+    const shell =
+      execSync('echo $SHELL', { encoding: 'utf-8', timeout: 5000 }).trim().split('/').pop() ||
+      'unknown';
     const supportedShells = ['zsh', 'bash', 'pwsh', 'powershell'];
     if (config.enableTerminalIntegration && !supportedShells.includes(shell)) {
       const warningKey = 'pi.terminalShellWarningShown';
