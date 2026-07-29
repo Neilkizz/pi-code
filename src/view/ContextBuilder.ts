@@ -20,45 +20,49 @@ export interface FileSuggestion {
  * Reads the editor's in-memory buffer, not just the disk version (F-104).
  */
 export async function buildContextItems(): Promise<ContextItem[]> {
-  const items: ContextItem[] = [];
-  const editor = vscode.window.activeTextEditor;
-  if (editor) {
-    const path = vscode.workspace.asRelativePath(editor.document.uri);
-    const dirty = editor.document.isDirty;
-    items.push({
-      type: 'file',
-      path,
-      label: path,
-      detail: dirty ? 'unsaved changes' : 'active file',
-      removable: false,
-      id: 'file-active',
-    });
-    if (!editor.selection.isEmpty) {
-      const lines = `${editor.selection.start.line + 1}-${editor.selection.end.line + 1}`;
-      const liveText = editor.document.getText(editor.selection);
+  try {
+    const items: ContextItem[] = [];
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      const path = vscode.workspace.asRelativePath(editor.document.uri);
+      const dirty = editor.document.isDirty;
       items.push({
-        type: 'selection',
+        type: 'file',
         path,
-        label: `${path}:${lines}`,
-        detail: `${liveText.length} chars (from buffer)`,
+        label: path,
+        detail: dirty ? 'unsaved changes' : 'active file',
+        removable: false,
+        id: 'file-active',
+      });
+      if (!editor.selection.isEmpty) {
+        const lines = `${editor.selection.start.line + 1}-${editor.selection.end.line + 1}`;
+        const liveText = editor.document.getText(editor.selection);
+        items.push({
+          type: 'selection',
+          path,
+          label: `${path}:${lines}`,
+          detail: `${liveText.length} chars (from buffer)`,
+          removable: true,
+          id: `sel-${path}`,
+        });
+      }
+    }
+    const diagnostics = vscode.languages.getDiagnostics();
+    let diagCount = 0;
+    for (const [, diags] of diagnostics) diagCount += diags.length;
+    if (diagCount > 0) {
+      items.push({
+        type: 'diagnostic',
+        label: `${diagCount} diagnostics`,
+        detail: 'from Problems panel',
         removable: true,
-        id: `sel-${path}`,
+        id: 'diagnostics-all',
       });
     }
+    return items;
+  } catch {
+    return [];
   }
-  const diagnostics = vscode.languages.getDiagnostics();
-  let diagCount = 0;
-  for (const [, diags] of diagnostics) diagCount += diags.length;
-  if (diagCount > 0) {
-    items.push({
-      type: 'diagnostic',
-      label: `${diagCount} diagnostics`,
-      detail: 'from Problems panel',
-      removable: true,
-      id: 'diagnostics-all',
-    });
-  }
-  return items;
 }
 
 // ---------------------------------------------------------------------------
