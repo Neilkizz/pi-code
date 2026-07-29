@@ -59,7 +59,10 @@ function createExtensionContext(configOverrides?: Record<string, unknown>): Exte
       respectGitIgnore: true,
       ...configOverrides,
     } as any,
-    vscodeContext: {} as any,
+    vscodeContext: {
+      extensionUri: { fsPath: '/fake/extension/path' },
+      globalStorageUri: { fsPath: '/fake/global/storage' },
+    } as any,
     showOutputChannel: () => {},
     log: () => {},
   } as ExtensionContext;
@@ -76,6 +79,9 @@ describe('ChatProvider dispatch', () => {
   let mockDiff: DiffController;
   let ctx: ExtensionContext;
   let provider: ChatProvider;
+  let mockWebview: any;
+  let mockWebviewView: any;
+  let webviewCallback: ((data: unknown) => void) | null = null;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -84,6 +90,26 @@ describe('ChatProvider dispatch', () => {
     mockDiff = createMockDiffController();
     ctx = createExtensionContext();
     provider = new ChatProvider(ctx, mockSessionManager, mockDiff);
+
+    webviewCallback = null;
+    mockWebview = {
+      postMessage: sandbox.stub().resolves(true),
+      onDidReceiveMessage: (cb: any) => {
+        webviewCallback = cb;
+        return { dispose: () => {} };
+      },
+      options: {},
+      html: '',
+      asWebviewUri: (uri: any) => uri,
+    };
+    mockWebviewView = {
+      webview: mockWebview,
+      show: () => {},
+      onDidChangeVisibility: () => ({ dispose: () => {} }),
+      visible: true,
+    };
+    // Initialize the provider with our mock webview view
+    provider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
   });
 
   afterEach(() => {
@@ -252,25 +278,34 @@ describe('ChatProvider dispatch', () => {
 
   it('dangerous command in auto mode shows warning and blocks when cancelled', async () => {
     const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
-    const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
 
-    const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
-    await provider['dispatch'](msg);
-    assert.ok(warnStub.calledOnce);
-    assert.ok(warnStub.firstCall.args[0].includes('Dangerous'));
+    const dispatchPromise = provider['dispatch']({ kind: 'prompt', text: 'sudo rm -rf /', images: [] });
+
+    // Wait a tiny tick for commandPreview to be posted
+    await new Promise((r) => setTimeout(r, 5));
+
+    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    assert.ok(previewCall, 'commandPreview should be posted');
+    const sentMsg = previewCall.args[0];
+    assert.strictEqual(sentMsg.risk, 'dangerous');
+    const pid = sentMsg.previewId;
+
+    // Simulate user cancelling via webview callback
+    webviewCallback!({ kind: 'cancelCommand', previewId: pid });
+
+    await dispatchPromise;
     assert.ok(promptStub.notCalled);
   });
 
   it('dangerous command in bypass mode skips warning and executes', async () => {
     const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
-    const warnStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves(undefined);
 
     const bypassCtx = createExtensionContext({ permissionMode: 'bypass' });
     const bypassProvider = new ChatProvider(bypassCtx, mockSessionManager, mockDiff);
+    bypassProvider.resolveWebviewView(mockWebviewView, {} as any, {} as any);
     try {
       const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
       await bypassProvider['dispatch'](msg);
-      assert.ok(warnStub.notCalled);
       assert.ok(promptStub.calledOnce);
     } finally {
       bypassProvider.dispose();
@@ -279,11 +314,20 @@ describe('ChatProvider dispatch', () => {
 
   it('dangerous command proceeds when user confirms', async () => {
     const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
-    // Return 'Execute' to simulate user clicking the confirm button
-    sandbox.stub(vscode.window, 'showWarningMessage').resolves('Execute' as any);
 
-    const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
-    await provider['dispatch'](msg);
+    const dispatchPromise = provider['dispatch']({ kind: 'prompt', text: 'sudo rm -rf /', images: [] });
+
+    await new Promise((r) => setTimeout(r, 5));
+
+    const previewCall = mockWebview.postMessage.getCalls().find((c: any) => c.args[0]?.kind === 'commandPreview');
+    assert.ok(previewCall, 'commandPreview should be posted');
+    const sentMsg = previewCall.args[0];
+    const pid = sentMsg.previewId;
+
+    // Simulate user confirming via webview callback
+    webviewCallback!({ kind: 'confirmCommand', previewId: pid });
+
+    await dispatchPromise;
     assert.ok(promptStub.calledOnce);
   });
 
@@ -323,5 +367,22 @@ describe('ChatProvider dispatch', () => {
     } finally {
       autosaveProvider.dispose();
     }
+  });
+
+  it('30s timeout on askForConfirmation auto-rejects with false', async () => {
+    // Override timeout limit to 20ms for fast test execution
+    (provider as any).CONFIRM_TIMEOUT_MS = 20;
+
+    const promptStub = sandbox.stub(mockSession, 'prompt').resolves();
+    const msg: WebviewToHost = { kind: 'prompt', text: 'sudo rm -rf /', images: [] };
+
+    const dispatchPromise = provider['dispatch'](msg);
+
+    // Wait past 20ms timeout
+    await new Promise((r) => setTimeout(r, 40));
+
+    await dispatchPromise;
+    // Should have auto-rejected due to timeout, meaning prompt was not executed
+    assert.ok(promptStub.notCalled);
   });
 });

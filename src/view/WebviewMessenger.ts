@@ -75,6 +75,14 @@ export interface ChangeSummaryMessage {
   summary: string;
 }
 
+export interface CommandPreviewMessage {
+  kind: 'commandPreview';
+  command: string;
+  risk: 'safe' | 'sensitive' | 'dangerous';
+  reason?: string;
+  previewId: string;
+}
+
 export type HostToWebview =
   | StateSnapshotMessage
   | PiEventMessage
@@ -83,7 +91,8 @@ export type HostToWebview =
   | FileSuggestionsMessage
   | ContextUpdateMessage
   | GitStatusMessage
-  | ChangeSummaryMessage;
+  | ChangeSummaryMessage
+  | CommandPreviewMessage;
 
 // ---------------------------------------------------------------------------
 // Webview → Host messages (user actions)
@@ -150,6 +159,16 @@ export interface RemoveContextItemMessage {
   id: string;
 }
 
+export interface ConfirmCommandMessage {
+  kind: 'confirmCommand';
+  previewId: string;
+}
+
+export interface CancelCommandMessage {
+  kind: 'cancelCommand';
+  previewId: string;
+}
+
 export type WebviewToHost =
   | PromptMessage
   | SteerMessage
@@ -162,7 +181,9 @@ export type WebviewToHost =
   | AcceptDiffMessage
   | RejectDiffMessage
   | RequestFileSuggestionsMessage
-  | RemoveContextItemMessage;
+  | RemoveContextItemMessage
+  | ConfirmCommandMessage
+  | CancelCommandMessage;
 
 // ---------------------------------------------------------------------------
 // Helper: send typed message to a webview.
@@ -194,6 +215,8 @@ export function decodeFromWebview(data: unknown): WebviewToHost | null {
     'rejectDiff',
     'requestFileSuggestions',
     'removeContextItem',
+    'confirmCommand',
+    'cancelCommand',
   ]);
   if (!validKinds.has(d.kind)) return null;
   return data as WebviewToHost;

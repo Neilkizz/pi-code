@@ -8,7 +8,8 @@ import { decodeFromWebview, postToWebview, type WebviewToHost } from './WebviewM
 import { buildContextItems, getFileSuggestions } from './ContextBuilder';
 import { readGitStatus } from './GitStatusReader';
 import { ChangeTracker } from './ChangeTracker';
-import { classifyCommand } from '../security/commandClassifier';
+import { classifyCommand, type Classification } from '../security/commandClassifier';
+import { AuditLog } from '../security/auditLog';
 
 /**
  * ChatProvider — implements vscode.WebviewViewProvider for the side-panel
@@ -25,12 +26,26 @@ export class ChatProvider implements vscode.WebviewViewProvider {
   private eventSubs = new Map<string, vscode.Disposable>();
   private disposables: vscode.Disposable[] = [];
   private tracker = new ChangeTracker();
+  private auditLog: AuditLog;
+
+  private pendingConfirmation: {
+    previewId: string;
+    resolve: (v: boolean) => void;
+    timer: NodeJS.Timeout;
+  } | null = null;
+  private readonly CONFIRM_TIMEOUT_MS = 30_000;
 
   constructor(
     private ctx: ExtensionContext,
     private sessions: SessionManager,
     private diff: DiffController,
   ) {
+    const storagePath =
+      ctx.vscodeContext.globalStorageUri?.fsPath ||
+      ctx.vscodeContext.extensionPath ||
+      process.cwd();
+    this.auditLog = new AuditLog(storagePath);
+
     // Resubscribe when the active session or its set changes.
     this.disposables.push(
       sessions.onDidChange(() => {
@@ -62,6 +77,22 @@ export class ChatProvider implements vscode.WebviewViewProvider {
     wv.onDidReceiveMessage((data: unknown) => {
       const msg = decodeFromWebview(data);
       if (!msg) return;
+      if (msg.kind === 'confirmCommand') {
+        if (this.pendingConfirmation?.previewId === msg.previewId) {
+          clearTimeout(this.pendingConfirmation.timer);
+          this.pendingConfirmation.resolve(true);
+          this.pendingConfirmation = null;
+        }
+        return;
+      }
+      if (msg.kind === 'cancelCommand') {
+        if (this.pendingConfirmation?.previewId === msg.previewId) {
+          clearTimeout(this.pendingConfirmation.timer);
+          this.pendingConfirmation.resolve(false);
+          this.pendingConfirmation = null;
+        }
+        return;
+      }
       void this.dispatch(msg);
     });
 
@@ -222,22 +253,27 @@ export class ChatProvider implements vscode.WebviewViewProvider {
             return;
           }
           const classification = classifyCommand(msg.text);
-          if (classification.risk === 'dangerous' && mode !== 'bypass') {
-            const confirm = await vscode.window.showWarningMessage(
-              `Pi Code: Dangerous command — ${classification.reason}`,
-              { modal: true },
-              'Execute',
-            );
-            if (!confirm) return;
+          let authorized = true;
+
+          // Check if we need to prompt the user (CR-1)
+          const needsWarning =
+            (classification.risk === 'dangerous' && mode !== 'bypass') ||
+            (classification.risk === 'sensitive' && mode === 'manual');
+
+          if (needsWarning) {
+            const previewId = Math.random().toString(36).substring(2, 10);
+            authorized = await this.askForConfirmation(previewId, msg.text, classification);
           }
-          if (classification.risk === 'sensitive' && mode === 'manual') {
-            const confirm = await vscode.window.showWarningMessage(
-              `Pi Code: Sensitive command — ${classification.reason}`,
-              { modal: true },
-              'Execute',
-            );
-            if (!confirm) return;
-          }
+
+          // Record audit entry (Step 7)
+          this.auditLog.record({
+            kind: 'command',
+            detail: msg.text,
+            risk: classification.risk,
+            authorized,
+          });
+
+          if (!authorized) return;
 
           if (this.ctx.config.autosaveFiles) {
             try {
@@ -330,11 +366,48 @@ export class ChatProvider implements vscode.WebviewViewProvider {
 </html>`;
   }
 
+  private askForConfirmation(
+    previewId: string,
+    command: string,
+    classification: Classification,
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        if (this.pendingConfirmation?.previewId === previewId) {
+          this.pendingConfirmation = null;
+        }
+        resolve(false);
+      }, this.CONFIRM_TIMEOUT_MS);
+
+      this.pendingConfirmation = { previewId, resolve, timer };
+
+      if (this.webviewView) {
+        postToWebview(this.webviewView.webview, {
+          kind: 'commandPreview',
+          command,
+          risk: classification.risk,
+          reason: classification.reason,
+          previewId,
+        });
+      } else {
+        clearTimeout(timer);
+        this.pendingConfirmation = null;
+        resolve(false);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Disposal
   // ---------------------------------------------------------------------------
 
   dispose(): void {
+    if (this.pendingConfirmation) {
+      clearTimeout(this.pendingConfirmation.timer);
+      this.pendingConfirmation.resolve(false);
+      this.pendingConfirmation = null;
+    }
+    this.auditLog.dispose();
     for (const sub of this.eventSubs.values()) sub.dispose();
     this.eventSubs.clear();
     for (const d of this.disposables) d.dispose();

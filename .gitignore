@@ -8,3 +8,5 @@ out/
 *.map
 .DS_Store
 coverage/
+audit.jsonl
+*.jsonl

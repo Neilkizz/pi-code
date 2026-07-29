@@ -7,6 +7,7 @@ import { ModesMenu, type PermissionMode, type EffortLevel } from './ModesMenu';
 import { ActionsMenu } from './ActionsMenu';
 import { WelcomeScreen } from './WelcomeScreen';
 import { InputArea } from './InputArea';
+import { ConfirmCard } from './ConfirmCard';
 import type { HostToWebview } from '../view/WebviewMessenger';
 import { AppState, AppAction, appReducer, initialState, type DisplayMessage } from './AppState';
 
@@ -58,6 +59,14 @@ export function App() {
           };
         case 'changeSummary':
           return { kind: 'changeSummary', summary: msg.summary };
+        case 'commandPreview':
+          return {
+            kind: 'commandPreview',
+            command: msg.command,
+            risk: msg.risk,
+            reason: msg.reason,
+            previewId: msg.previewId,
+          };
         default:
           return null;
       }
@@ -167,6 +176,22 @@ export function App() {
           <div className="change-summary-title">Changes made</div>
           <div className="change-summary-file">{state.changeSummary}</div>
         </div>
+      )}
+      {state.pendingConfirmation && (
+        <ConfirmCard
+          command={state.pendingConfirmation.command}
+          risk={state.pendingConfirmation.risk}
+          reason={state.pendingConfirmation.reason}
+          previewId={state.pendingConfirmation.previewId}
+          onConfirm={(pid) => {
+            post({ kind: 'confirmCommand', previewId: pid } as any);
+            dispatch({ kind: 'clearPreview' });
+          }}
+          onCancel={(pid) => {
+            post({ kind: 'cancelCommand', previewId: pid } as any);
+            dispatch({ kind: 'clearPreview' });
+          }}
+        />
       )}
       <InputArea
         onSend={handleSend}

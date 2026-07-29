@@ -1,6 +1,7 @@
 import React from 'react';
+import { type PermissionMode } from '../types/permission';
+export { PermissionMode };
 
-export type PermissionMode = 'manual' | 'edit' | 'plan' | 'auto' | 'bypass';
 export type EffortLevel = 'off' | 'low' | 'medium' | 'high' | 'max';
 
 interface Props {
@@ -19,10 +20,10 @@ const MODES: { id: PermissionMode; icon: string; title: string; desc: string }[]
     desc: 'Claude will ask for approval before making each edit',
   },
   {
-    id: 'edit',
-    icon: '</>',
-    title: 'Edit automatically',
-    desc: 'Claude will edit your selected text or the whole file',
+    id: 'readonly',
+    icon: '🛡️',
+    title: 'Read-only',
+    desc: 'Claude can read files and workspace but will not make any edits',
   },
   {
     id: 'plan',
@@ -115,7 +116,7 @@ export function ModesMenu({
                     <path d="M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.8-6-2.4L2 14" />
                   </svg>
                 )}
-                {mode.id === 'edit' && (
+                {mode.id === 'readonly' && (
                   <svg
                     width="18"
                     height="18"
@@ -124,9 +125,7 @@ export function ModesMenu({
                     stroke="currentColor"
                     strokeWidth="1.8"
                   >
-                    <polyline points="16 18 22 12 16 6" />
-                    <polyline points="8 6 2 12 8 18" />
-                    <line x1="14" y1="4" x2="10" y2="20" />
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                 )}
                 {mode.id === 'plan' && (

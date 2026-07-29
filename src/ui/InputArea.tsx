@@ -154,8 +154,8 @@ export function InputArea({
     switch (m) {
       case 'manual':
         return '✋';
-      case 'edit':
-        return '</>';
+      case 'readonly':
+        return '🛡️';
       case 'plan':
         return '📑';
       case 'auto':
@@ -169,8 +169,8 @@ export function InputArea({
     switch (m) {
       case 'manual':
         return 'Manual';
-      case 'edit':
-        return 'Edit automatically';
+      case 'readonly':
+        return 'Read-only';
       case 'plan':
         return 'Plan';
       case 'auto':

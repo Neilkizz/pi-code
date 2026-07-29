@@ -219,7 +219,9 @@ export type AppAction =
   | { kind: 'contextUpdate'; items: { label: string }[] }
   | { kind: 'gitStatus'; branch: string; added: number; deleted: number; modified: number }
   | { kind: 'changeSummary'; summary: string }
-  | { kind: 'selectSession'; sessionId: string };
+  | { kind: 'selectSession'; sessionId: string }
+  | { kind: 'commandPreview'; command: string; risk: 'safe' | 'sensitive' | 'dangerous'; reason?: string; previewId: string }
+  | { kind: 'clearPreview' };
 
 export interface AppState {
   activeSessionId: string | null;
@@ -234,6 +236,12 @@ export interface AppState {
   changeSummary: string;
   sessionName: string;
   sessions: SessionItem[];
+  pendingConfirmation: {
+    command: string;
+    risk: 'safe' | 'sensitive' | 'dangerous';
+    reason?: string;
+    previewId: string;
+  } | null;
 }
 
 export const initialState: AppState = {
@@ -249,6 +257,7 @@ export const initialState: AppState = {
   changeSummary: '',
   sessionName: '',
   sessions: [],
+  pendingConfirmation: null,
 };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -323,6 +332,24 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         activeSessionId: action.sessionId,
         messages: [],
+        pendingConfirmation: null,
+      };
+    }
+    case 'commandPreview': {
+      return {
+        ...state,
+        pendingConfirmation: {
+          command: action.command,
+          risk: action.risk,
+          reason: action.reason,
+          previewId: action.previewId,
+        },
+      };
+    }
+    case 'clearPreview': {
+      return {
+        ...state,
+        pendingConfirmation: null,
       };
     }
     default:
