@@ -189,7 +189,7 @@ Pi Code 不包含内置的 MCP（模型上下文协议）服务器。MCP 服务�
 | Field | Value |
 | --- | --- |
 | **Severity / 严重性** | Medium |
-| **Status / 状态** | Open |
+| **Status / 状态** | **Resolved** — shell detection warning added in v0.2.1 |
 | **Component / 模块** | Terminal (`src/terminal/PiTerminal.ts`) |
 | **Reported / 报告时间** | 2026-07-27 (Review Report) |
 
@@ -213,6 +213,40 @@ The terminal integration feature (`pi.enableTerminalIntegration`) forwards bash 
 - Disable `pi.enableTerminalIntegration` to avoid confusion
 - 切换到受支持的 shell（macOS/Linux 使用 zsh，Windows 使用 PowerShell）
 - 禁用 `pi.enableTerminalIntegration` 以避免混淆
+
+---
+
+### KI-009: Virtual Scrolling Not Implemented (Low)
+
+| Field | Value |
+| --- | --- |
+| **Severity / 严重性** | Low |
+| **Status / 状态** | Open — deferred to v0.3.0 |
+| **Component / 模块** | Webview UI (`src/ui/AppState.ts`) |
+| **Reported / 报告时间** | 2026-07-29 (Static analysis) |
+
+**Description / 描述：**
+The chat message list uses static rendering with truncation limits: maximum 200 messages, 50,000 characters per message (text and thinkingText). Static analysis estimates ~10MB text payload (200 × 50KB) and ~10,000 DOM nodes (~2MB footprint), totaling ~10-15MB render cost. Virtual scrolling is not implemented.
+
+聊天消息列表使用静态渲染和截断限制：最多 200 条消息，每条消息 50,000 字符（text 和 thinkingText）。静态分析估算约 10MB 文本负载（200 × 50KB）和约 10,000 个 DOM 节点（约 2MB 占用），总计约 10-15MB 渲染开销。未实现虚拟滚动。
+
+**Impact / 影响：**
+
+- Acceptable for typical sessions (<200 messages)
+- May cause sluggish rendering on low-end devices when session approaches 200 messages
+- No functional degradation — truncation prevents unbounded growth
+- 对于典型会话（<200 条消息）可接受
+- 当会话接近 200 条消息时，可能在低端设备上导致渲染缓慢
+- 无功能降级——截断防止无限制增长
+
+**Workaround / 临时方案：**
+
+- Truncation at 200 messages / 50K chars prevents unbounded memory growth
+- Users can fork sessions to start fresh before hitting limits
+- Virtual scrolling will be implemented in v0.3.0 for sessions regularly exceeding 200 messages
+- 200 条消息/50K 字符的截断防止内存无限制增长
+- 用户可以在达到限制前 fork 会话重新开始
+- 虚拟滚动将在 v0.3.0 中实现，用于经常超过 200 条消息的会话
 
 ### KI-007: Performance on Large Workspaces Varies by Model (Medium)
 
@@ -318,13 +352,13 @@ The following issues from the review report were **fully resolved** in v0.1.0 an
 | Blocker | 0 | 0 | 0 |
 | Critical | 0 | 2 | 2 |
 | High | 2 (KI-002, KI-003) | 5 | 7 |
-| Medium | 3 (KI-001, KI-004, KI-006, KI-007) | 3 | 6 |
-| Low | 2 (KI-005, KI-008) | 1 | 3 |
-| **Total** | **7** | **11** | **18** |
+| Medium | 3 (KI-001, KI-004, KI-007) | 3 | 6 |
+| Low | 2 (KI-005, KI-008, KI-009) | 1 | 4 |
+| **Total** | **7** | **11** | **19** |
 
-**As of v0.1.0, the project meets the Medium-term delivery threshold:** 0 Blocker, 0 Critical, 0 High-security defects, and ≤5 Medium issues (assuming KI-002 and KI-003 are treated as testing gaps rather than product defects for release decisions). Low issues are carried to the backlog.
+**As of v0.2.1:** KI-006 resolved (shell detection warning added). KI-009 documented (virtual scrolling deferred to v0.3.0).
 
-**截至 v0.1.0，项目满足中期交付阈值：** 0 个 Blocker、0 个 Critical、0 个 High 级安全缺陷，以及不超过 5 个 Medium 问题（假设 KI-002 和 KI-003 在发布决策中被视为测试缺口而非产品缺陷）。Low 问题纳入后续版本。
+**截至 v0.2.1：** KI-006 已解决（添加 shell 检测警告）。KI-009 已记录（虚拟滚动推迟到 v0.3.0）。
 
 ---
 
