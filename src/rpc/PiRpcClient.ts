@@ -28,7 +28,7 @@ export interface PiRpcClientOptions {
   extraArgs?: string[];
   /** Skip the `--mode rpc` prefix. Used for non-pi subprocesses (e.g., mock server in tests). */
   skipModePrefix?: boolean;
-  /** Skip calling start() in constructor. Used in tests to avoid spawning subprocesses. */
+  /** Make start() a no-op — used in tests to avoid spawning subprocesses. */
   skipStart?: boolean;
   /** Cwd for the subprocess — usually the workspace folder. */
   cwd?: string;
