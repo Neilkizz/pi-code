@@ -5,7 +5,10 @@
     "outDir": "out",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "types": ["node", "mocha"]
+    "types": ["node", "mocha"],
+    "paths": {
+      "vscode": ["./test/__mocks__/vscode"]
+    }
   },
   "include": ["./**/*.ts", "../src/**/*.ts"]
 }
