@@ -8,7 +8,7 @@
 | | F-001 | 可安装 `.vsix` | ✅ | `pi-code-0.1.0.vsix` 可构建 (156 KB) |
 | | F-002 | 多方式激活 | ✅ | Activity Bar, 命令面板, 快捷键 |
 | | F-003 | 延迟激活 | ✅ | 已移除 `onStartupFinished`, VS Code 自动生成激活 |
-| | F-004 | 多位置显示 | ⚠️ | 仅主侧栏 (WebviewView), 不支持辅助侧栏/标签页 [Planned: Phase 3.5 stretch] |
+| | F-004 | 多位置显示 | ⚠️ | 仅主侧栏 (WebviewView), 不支持辅助侧栏/标签页 [Deferred to v0.3.0 - stretch feature] |
 | | F-005 | 状态恢复 | ✅ | `SessionManager.restoreSaved()` |
 | | F-006 | 主题适配 | ⚠️ | 使用 ThemeColor 变量, 无 High Contrast 显式覆盖 |
 | | F-007 | 中文体验 | ⚠️ | UTF-8 正确, 但 UI 为英文 |
@@ -49,18 +49,18 @@
 | | F-414 | 变更汇总 | ⚠️ | ChatProvider 追踪文件修改并推送汇总到 webview |
 | **6. 终端与命令执行** | | | | |
 | | F-501 | 终端创建 | ✅ | `PiTerminal.show()` |
-| | F-502 | 命令预览 | ❌ | 执行前不显示完整命令 [Planned: Phase 3.2] |
-| | F-503 | 权限控制 | ⚠️ | `pi.permissionMode` 设置 (auto/manual/off) |
+| | F-502 | 命令预览 | ✅ | 执行前显示完整命令 + 风险等级 + 确认卡片 [Phase 3.2 completed] |
+| | F-503 | 权限控制 | ✅ | `pi.permissionMode` 设置 (readonly/plan/manual/auto/bypass) [Phase 3.1 completed] |
 | | F-504 | 输出捕获 | ⚠️ | 委托给 `pi` CLI |
 | | F-505 | 实时输出 | ✅ | 工具更新事件转发到终端 |
 | | F-506 | 中断命令 | ✅ | `abort` RPC + SIGTERM/SIGKILL |
 | | F-507 | 超时机制 | ⚠️ | 全局 30s 超时, 无按命令类型配置 |
 | | F-508 | 大输出保护 | ✅ | reduceMessages 中单条消息 >50K chars 自动截断 |
-| | F-509 | Shell 兼容 | ⚠️ | zsh/bash 支持, PowerShell 未测试 |
+| | F-509 | Shell 兼容 | ✅ | zsh/bash/PowerShell 支持; unsupported shell detection + one-time warning [Phase 4.3 completed] |
 | | F-510 | 退出码判断 | ⚠️ | 委托给 `pi` CLI |
-| | F-511 | 环境继承 | ❌ | 无环境变量配置 [Planned: Phase 3.4] |
-| | F-512 | 敏感命令确认 | ❌ | 无敏感命令检测或确认 [Planned: Phase 3.1] |
-| | F-513 | 命令审计 | ❌ | 无持久审计日志 [Planned: Phase 3.2] |
+| | F-511 | 环境继承 | ✅ | `pi.inheritEnv` + `pi.extraEnv` 设置 [Phase 3.4 completed] |
+| | F-512 | 敏感命令确认 | ✅ | classifyCommand + 风险等级确认 [Phase 3.1 completed] |
+| | F-513 | 命令审计 | ✅ | AuditLog JSONL 持久化 + 轮转 [Phase 3.2 completed] |
 | **7. Agent 智能体闭环** | | | | |
 | | F-601~F-610 | 多轮调用/验证/修复等 | ⚠️ | 委托给 `pi` CLI |
 | **8. 权限体系** | | | | |
@@ -73,7 +73,7 @@
 | | 状态/分支/提交等 | ⚠️ | Git 状态显示(扩展层), 写操作委托给 `pi` CLI |
 | **安全** | | | | |
 | | S-001 | 密钥存储 | ⚠️ | 委托给 `pi` CLI 的 `~/.pi/credentials` |
-| | S-002 | 配置脱敏 | ❌ | 无显式脱敏 [Planned: Phase 3.3] |
+| | S-002 | 配置脱敏 | ✅ | sanitizeLogMessage 在 Configuration getter 入口点对 executable/sessionDir 脱敏 [Phase 3.3 completed] |
 | | S-003 | Workspace Trust | ✅ | `handleWorkspaceTrust()` |
 | | S-004 | 路径边界 | ✅ | `resolveSafePath()` 验证 |
 | | S-005 | 敏感文件 | ⚠️ | `isSensitiveFile()` 检测, 未在发送线路中强制执行 |
