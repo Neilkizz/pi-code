@@ -1,5 +1,5 @@
- import { useCallback, useEffect, useRef } from "react";
-import type { HostToWebview, WebviewToHost } from "../view/WebviewMessenger";
+import { useCallback, useEffect, useRef } from 'react';
+import type { HostToWebview, WebviewToHost } from '../view/WebviewMessenger';
 
 /**
  * Hook for the VSCode webview postMessage bridge.
@@ -26,12 +26,12 @@ export function useVsCodeMessaging(onHostMessage: (msg: HostToWebview) => void) 
   useEffect(() => {
     const handler = (ev: MessageEvent) => {
       const msg = ev.data as HostToWebview;
-      if (msg && typeof msg.kind === "string") {
+      if (msg && typeof msg.kind === 'string') {
         onHostMessage(msg);
       }
     };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   }, [onHostMessage]);
 
   const post = useCallback((msg: WebviewToHost) => {

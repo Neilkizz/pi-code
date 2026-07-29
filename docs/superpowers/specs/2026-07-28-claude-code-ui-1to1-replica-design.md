@@ -8,7 +8,7 @@
 
 ## 1. Overview & Objectives
 
-The goal is to align the UI/UX of the `pi-code` extension 100% with the official Claude Code VS Code extension across all visual components, color palettes, popups, prompt box card, context badges, and plan confirmation flows.
+The goal is to align the UI/UX of the `pi-code` extension 100% with the official Claude Code VS Code extension across all visual components, popups, prompt box card, context badges, and plan confirmation flows.
 
 ---
 
@@ -16,7 +16,7 @@ The goal is to align the UI/UX of the `pi-code` extension 100% with the official
 
 ### 2.1 Header & History Drawer (`HeaderBar.tsx` & `HistoryDrawer.tsx`)
 - **Header Bar**: Minimalist header showing active session name, branch context, and an expand icon.
-- **Past Conversations Drawer**: Sliding/dropdown menu triggered by clicking the session title.
+- **Past Conversations Drawer**: Dropdown menu triggered by clicking the session title.
   - Lists historical conversations with timestamp, message count, and preview title.
   - Action items: "New conversation", "Clear all history", "Search past chats".
   - Quick session switching.
@@ -43,11 +43,11 @@ The goal is to align the UI/UX of the `pi-code` extension 100% with the official
   - Group `Context`: `Attach file...`, `Mention file from this project...`, `Clear conversation`, `Rewind`.
   - Group `Model`: `Switch model...`, `Effort (Max)` slider, `Thinking` toggle switch, `Switch models when a message is flagged` toggle switch, `Account & usage...`.
 
-### 2.4 Plan Review Card (`PlanReviewCard.tsx`)
-- Structured Markdown plan preview block inside the chat list when agent enters Plan mode.
-- Bottom action bar:
-  - Primary button: **Accept Plan** (green accent).
-  - Alternative feedback input: "Tell Claude what to do instead...".
+### 2.4 Plan virtual document & CodeLens (`PlanContentProvider`)
+- **`pi-plan` Scheme**: Register a TextDocumentContentProvider to serve the plan Markdown at `pi-plan://plan/session-id.md` in the editor tab.
+- **CodeLens Integration**:
+  - Displays `Accept Plan` (one-click run for command `pi.acceptPlan` to start edits).
+  - Displays `Revise Plan` (one-click run for command `pi.revisePlan` to ask user for comments and send as feedback).
 
 ### 2.5 Formatting & Tool Execution Blocks (`Message.tsx`)
 - Bullet dot indicators: `● Thinking` (gray), `● ToolName` (green for done, blue for running, red for error).

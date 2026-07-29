@@ -24,7 +24,7 @@
 export type RecordCallback = (line: string) => void;
 
 export class JsonlLineReader {
-  private buffer = "";
+  private buffer = '';
   private decoder: TextDecoder | null = null;
   private callback: RecordCallback | null = null;
 
@@ -35,18 +35,18 @@ export class JsonlLineReader {
 
   /** Feed bytes. The Buffer is decoded incrementally to respect multi-byte boundaries. */
   push(chunk: Buffer | string): void {
-    if (typeof chunk === "string") {
+    if (typeof chunk === 'string') {
       this.append(chunk);
     } else {
       // Prefer streaming TextDecoder so a chunk ending mid-codepoint does not
       // emit U+FFFD. Fallback to toString("utf8") if TextDecoder is unavailable.
-      if (typeof TextDecoder !== "undefined") {
+      if (typeof TextDecoder !== 'undefined') {
         if (!this.decoder) {
-          this.decoder = new TextDecoder("utf-8", { fatal: false });
+          this.decoder = new TextDecoder('utf-8', { fatal: false });
         }
         this.append(this.decoder.decode(chunk, { stream: true }));
       } else {
-        this.append(chunk.toString("utf8"));
+        this.append(chunk.toString('utf8'));
       }
     }
   }
@@ -55,7 +55,7 @@ export class JsonlLineReader {
   flush(): void {
     if (this.buffer.length > 0) {
       const line = this.buffer;
-      this.buffer = "";
+      this.buffer = '';
       this.emit(line);
     }
     // Finalise the streaming decoder so it emits any pending tail bytes.
@@ -71,9 +71,9 @@ export class JsonlLineReader {
     this.buffer += text;
     let nl: number;
     // Split ONLY on LF (\n). Strip a single trailing CR (\r) if present.
-    while ((nl = this.buffer.indexOf("\n")) !== -1) {
+    while ((nl = this.buffer.indexOf('\n')) !== -1) {
       let line = this.buffer.slice(0, nl);
-      if (line.endsWith("\r")) {
+      if (line.endsWith('\r')) {
         line = line.slice(0, -1);
       }
       this.buffer = this.buffer.slice(nl + 1);
@@ -91,7 +91,7 @@ export class JsonlLineReader {
         // Swallow handler errors so a bad callback can't crash the stream loop.
         // The caller is responsible for surfacing parse/handler errors via logs.
         // eslint-disable-next-line no-console
-        console.error("[JsonlLineReader] record handler threw:", err);
+        console.error('[JsonlLineReader] record handler threw:', err);
       }
     }
   }

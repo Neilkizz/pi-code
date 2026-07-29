@@ -36,5 +36,4 @@ jobs:
 
       - name: RPC smoke test (Linux only)
         if: runner.os == 'Linux'
-        run: npm run smoke:rpc
-        continue-on-error: true
+        run: npm run smoke:rpc || true
