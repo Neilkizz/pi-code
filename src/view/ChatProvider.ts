@@ -215,7 +215,11 @@ export class ChatProvider implements vscode.WebviewViewProvider {
         case 'prompt':
         case 'steer':
           if (this.ctx.config.autosaveFiles) {
-            await vscode.workspace.saveAll(false);
+            try {
+              await vscode.workspace.saveAll(false);
+            } catch (err) {
+              this.ctx.log('warn', `autosave failed: ${(err as Error).message}`);
+            }
           }
           // Show context visibility before sending (F-113).
           void buildContextItems().then((items) => {
