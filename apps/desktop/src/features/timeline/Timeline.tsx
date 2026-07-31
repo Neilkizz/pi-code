@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavIcon } from "../../design-system/NavIcon";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { ActivityItem, TaskViewState } from "../sessions/types";
+import { ToolEventCard } from "./ToolEventCard";
 
 interface TimelineProps {
   hasTask: boolean;
@@ -134,7 +135,26 @@ export function Timeline({
               </div>
               {message.text ? (
                 <div className="message__markdown">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code({ node, inline, className, children, ...props }: any) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        if (!inline && (match || String(children).includes("\n"))) {
+                          return (
+                            <CodeBlock className={className}>
+                              {children}
+                            </CodeBlock>
+                          );
+                        }
+                        return (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
                     {message.text}
                   </ReactMarkdown>
                 </div>
@@ -210,7 +230,7 @@ export function Timeline({
           </summary>
           <div className="activity-list">
             {taskView.activities.map((activity) => (
-              <ActivityCard activity={activity} key={activity.id} />
+              <ToolEventCard activity={activity} key={activity.id} />
             ))}
           </div>
         </details>
@@ -219,44 +239,36 @@ export function Timeline({
   );
 }
 
-function ActivityCard({ activity }: { activity: ActivityItem }) {
+function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
   const { t } = useI18n();
-  const status = activity.status;
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const language = match ? match[1] : "";
+  const textContent = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(textContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <article
-      className={`activity activity--${activity.kind}${
-        status ? ` activity--${status}` : ""
-      }`}
-    >
-      <header className="activity__header">
-        <span className="activity__status">
-          {status === "running"
-            ? t("Running…")
-            : status === "failed"
-              ? t("Failed")
-              : status === "completed"
-                ? t("Completed")
-                : t("Event")}
-        </span>
-        <time dateTime={new Date(activity.createdAt).toISOString()}>
-          {formatActivityTime(activity.createdAt)}
-        </time>
-      </header>
-      <strong>{activity.title}</strong>
-      {activity.detail ? <p>{activity.detail}</p> : null}
-      {activity.input ? (
-        <details className="activity__payload">
-          <summary>{t("Input")}</summary>
-          <pre>{activity.input}</pre>
-        </details>
-      ) : null}
-      {activity.output ? (
-        <details className="activity__payload">
-          <summary>{t("Output")}</summary>
-          <pre>{activity.output}</pre>
-        </details>
-      ) : null}
-    </article>
+    <div className="code-block">
+      <div className="code-block__header">
+        <span className="code-block__language">{language || "code"}</span>
+        <button
+          type="button"
+          className="code-block__copy"
+          onClick={handleCopy}
+          aria-label={t("Copy code")}
+        >
+          {copied ? t("Copied!") : t("Copy Code")}
+        </button>
+      </div>
+      <pre>
+        <code className={className}>{children}</code>
+      </pre>
+    </div>
   );
 }
 

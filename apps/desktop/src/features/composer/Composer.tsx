@@ -6,58 +6,80 @@ import type {
   TaskPermissionMode,
   TaskRuntimeProfile,
 } from "@pi-desktop/protocol";
+import { useEffect, useRef, useState } from "react";
 import { NavIcon } from "../../design-system/NavIcon";
 import { useI18n } from "../../i18n/I18nProvider";
 import { deriveComposerState } from "./composerState";
+import { MentionsAutocomplete, type MentionCandidate } from "./MentionsAutocomplete";
 
-interface ComposerProps {
-  hasTask: boolean;
-  cwd: string;
-  prompt: string;
-  attachments: TaskAttachment[];
-  profile: TaskRuntimeProfile;
-  isolation: TaskIsolation;
-  repositoryInfo: RepositoryInfo | null;
-  projectCheck: "idle" | "checking" | "git" | "notGit";
-  projectCheckMessage: string;
-  endpoints: EndpointProfile[];
+const DEFAULT_CANDIDATES: MentionCandidate[] = [
+  { id: "1", name: "App.tsx", path: "src/App.tsx", kind: "file" },
+  { id: "2", name: "Composer.tsx", path: "src/features/composer/Composer.tsx", kind: "file" },
+  { id: "3", name: "Timeline.tsx", path: "src/features/timeline/Timeline.tsx", kind: "file" },
+  { id: "4", name: "package.json", path: "package.json", kind: "file" },
+  { id: "5", name: "styles.css", path: "src/styles.css", kind: "file" },
+];
+
+export interface ComposerProps {
+  hasTask?: boolean;
+  cwd?: string;
+  prompt?: string;
+  draft?: string;
+  attachments?: TaskAttachment[];
+  profile?: TaskRuntimeProfile;
+  isolation?: TaskIsolation;
+  repositoryInfo?: RepositoryInfo | null;
+  projectCheck?: "idle" | "checking" | "git" | "notGit";
+  projectCheckMessage?: string;
+  endpoints?: EndpointProfile[];
   selectedEndpoint?: EndpointProfile;
-  hostReady: boolean;
-  taskConnected: boolean;
-  taskRunning: boolean;
-  isSubmitting: boolean;
-  onCwdChange: (cwd: string) => void;
-  onPromptChange: (prompt: string) => void;
-  onAttach: () => void;
-  onRemoveAttachment: (attachment: TaskAttachment) => void;
-  onChooseProject: () => void;
-  onUseScratchWorkspace: () => void;
-  onSelectEndpoint: (providerId: string) => void;
-  onSelectModel: (modelId: string) => void;
-  onPermissionMode: (mode: TaskPermissionMode) => void;
-  onIsolation: (isolation: TaskIsolation) => void;
-  onSubmit: () => void;
-  onAbort: () => void;
+  hostReady?: boolean;
+  isHostConnected?: boolean;
+  taskConnected?: boolean;
+  isSessionReady?: boolean;
+  taskRunning?: boolean;
+  isRunning?: boolean;
+  isSubmitting?: boolean;
+  candidates?: MentionCandidate[];
+  onCwdChange?: (cwd: string) => void;
+  onPromptChange?: (prompt: string) => void;
+  onDraftChange?: (draft: string) => void;
+  onAttach?: () => void;
+  onRemoveAttachment?: (attachment: TaskAttachment) => void;
+  onChooseProject?: () => void;
+  onUseScratchWorkspace?: () => void;
+  onSelectEndpoint?: (providerId: string) => void;
+  onSelectModel?: (modelId: string) => void;
+  onPermissionMode?: (mode: TaskPermissionMode) => void;
+  onIsolation?: (isolation: TaskIsolation) => void;
+  onSubmit?: () => void;
+  onAbort?: () => void;
 }
 
 export function Composer({
-  hasTask,
-  cwd,
+  hasTask = false,
+  cwd = "",
   prompt,
-  attachments,
-  profile,
-  isolation,
-  repositoryInfo,
-  projectCheck,
-  projectCheckMessage,
-  endpoints,
+  draft,
+  attachments = [],
+  profile = { permissionMode: "ask" },
+  isolation = "worktree",
+  repositoryInfo = null,
+  projectCheck = "idle",
+  projectCheckMessage = "",
+  endpoints = [],
   selectedEndpoint,
-  hostReady,
-  taskConnected,
-  taskRunning,
-  isSubmitting,
+  hostReady = true,
+  isHostConnected,
+  taskConnected = true,
+  isSessionReady,
+  taskRunning = false,
+  isRunning,
+  isSubmitting = false,
+  candidates = DEFAULT_CANDIDATES,
   onCwdChange,
   onPromptChange,
+  onDraftChange,
   onAttach,
   onRemoveAttachment,
   onChooseProject,
@@ -70,19 +92,52 @@ export function Composer({
   onAbort,
 }: ComposerProps) {
   const { t } = useI18n();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const actualPrompt = prompt ?? draft ?? "";
+  const actualHostReady = isHostConnected ?? hostReady;
+  const actualTaskConnected = isSessionReady ?? taskConnected;
+  const actualTaskRunning = isRunning ?? taskRunning;
+
+  const handlePromptChange = (val: string) => {
+    if (onPromptChange) onPromptChange(val);
+    if (onDraftChange) onDraftChange(val);
+  };
+
+  // Mention State
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const filteredCandidates = candidates.filter((item) =>
+    item.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+    (item.path && item.path.toLowerCase().includes(mentionQuery.toLowerCase()))
+  );
+
+  // Auto-expand textarea height up to 200px
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const targetHeight = Math.min(Math.max(scrollHeight, 72), 200);
+      textareaRef.current.style.height = `${targetHeight}px`;
+    }
+  }, [actualPrompt]);
+
   const composerState = deriveComposerState({
     hasTask,
     cwd,
-    prompt,
+    prompt: actualPrompt,
     attachments,
     isolation,
     repositoryInfo,
     projectCheck,
-    hostReady,
-    taskConnected,
-    taskRunning,
+    hostReady: actualHostReady,
+    taskConnected: actualTaskConnected,
+    taskRunning: actualTaskRunning,
     isSubmitting,
   });
+
   const submitDisabledReason = composerState.canSubmit
     ? undefined
     : composerState.blockReason === "submitting"
@@ -99,9 +154,50 @@ export function Composer({
                 ? t("A Git repository is required for an isolated worktree")
                 : t("Enter a prompt before sending");
 
+  const updateMentionState = (text: string, cursorPos: number) => {
+    const textBeforeCursor = text.slice(0, cursorPos);
+    const match = textBeforeCursor.match(/@([\w./-]*)$/);
+    if (match) {
+      setIsMentionOpen(true);
+      setMentionQuery(match[1]);
+      setSelectedIndex(0);
+    } else {
+      setIsMentionOpen(false);
+      setMentionQuery("");
+    }
+  };
+
+  const handleSelectMention = (candidate: MentionCandidate) => {
+    if (!textareaRef.current) return;
+    const cursorPos = textareaRef.current.selectionStart || actualPrompt.length;
+    const textBeforeCursor = actualPrompt.slice(0, cursorPos);
+    const textAfterCursor = actualPrompt.slice(cursorPos);
+    const newTextBefore = textBeforeCursor.replace(/@([\w./-]*)$/, `@${candidate.name} `);
+    const updated = newTextBefore + textAfterCursor;
+    handlePromptChange(updated);
+    setIsMentionOpen(false);
+    setMentionQuery("");
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const newPos = newTextBefore.length;
+        textareaRef.current.setSelectionRange(newPos, newPos);
+      }
+    }, 0);
+  };
+
   return (
     <div className="prompt-dock">
-      <div className="composer">
+      <div className="composer glassmorphism">
+        {isMentionOpen ? (
+          <MentionsAutocomplete
+            query={mentionQuery}
+            candidates={candidates}
+            selectedIndex={selectedIndex}
+            onSelect={handleSelectMention}
+          />
+        ) : null}
+
         {attachments.length > 0 ? (
           <div
             className="composer-attachments"
@@ -124,8 +220,8 @@ export function Composer({
                 <small>{formatBytes(attachment.size)}</small>
                 <button
                   type="button"
-                  onClick={() => onRemoveAttachment(attachment)}
-                  disabled={taskRunning || isSubmitting}
+                  onClick={() => onRemoveAttachment?.(attachment)}
+                  disabled={actualTaskRunning || isSubmitting}
                   aria-label={t("Remove {name}", { name: attachment.name })}
                 >
                   ×
@@ -138,23 +234,68 @@ export function Composer({
           {t("Prompt")}
         </label>
         <textarea
+          ref={textareaRef}
           id="task-prompt"
-          value={prompt}
-          onChange={(event) => onPromptChange(event.target.value)}
+          value={actualPrompt}
+          onChange={(event) => {
+            handlePromptChange(event.target.value);
+            updateMentionState(event.target.value, event.target.selectionStart);
+          }}
+          onKeyUp={(event) => {
+            if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+              updateMentionState(actualPrompt, (event.target as HTMLTextAreaElement).selectionStart);
+            }
+          }}
           onKeyDown={(event) => {
+            if (event.key === "@") {
+              setIsMentionOpen(true);
+              setMentionQuery("");
+              setSelectedIndex(0);
+              return;
+            }
+
+            if (isMentionOpen && filteredCandidates.length > 0) {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setSelectedIndex((prev) => (prev + 1) % filteredCandidates.length);
+                return;
+              }
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setSelectedIndex((prev) => (prev - 1 + filteredCandidates.length) % filteredCandidates.length);
+                return;
+              }
+              if (event.key === "Enter" || event.key === "Tab") {
+                event.preventDefault();
+                const selected = filteredCandidates[selectedIndex];
+                if (selected) {
+                  handleSelectMention(selected);
+                }
+                return;
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setIsMentionOpen(false);
+                return;
+              }
+            }
+
             if (
               event.key === "Enter" &&
               !event.shiftKey &&
-              !event.nativeEvent.isComposing &&
-              composerState.canSubmit
+              !event.nativeEvent.isComposing
             ) {
-              event.preventDefault();
-              onSubmit();
+              if (composerState.canSubmit && onSubmit) {
+                event.preventDefault();
+                onSubmit();
+              } else if (!composerState.canSubmit) {
+                event.preventDefault();
+              }
             }
           }}
           placeholder={
             hasTask
-              ? taskConnected
+              ? actualTaskConnected
                 ? t("Ask Pi to build, review, explain, or fix…")
                 : t("Restoring this session…")
               : t("Describe what you want Pi to accomplish…")
@@ -167,7 +308,7 @@ export function Composer({
               className="composer__attach"
               type="button"
               onClick={onAttach}
-              disabled={!taskConnected || taskRunning || isSubmitting}
+              disabled={!actualTaskConnected || actualTaskRunning || isSubmitting}
               aria-label={t("Attach files")}
               title={`${t("Attach files")} (25 MiB)`}
             >
@@ -186,7 +327,7 @@ export function Composer({
               <select
                 className="composer-select"
                 value={profile.providerId ?? ""}
-                onChange={(event) => onSelectEndpoint(event.target.value)}
+                onChange={(event) => onSelectEndpoint?.(event.target.value)}
                 aria-label={t("API endpoint")}
               >
                 <option value="">{t("Pi default")}</option>
@@ -201,7 +342,7 @@ export function Composer({
               <select
                 className="composer-select composer-select--model"
                 value={profile.modelId ?? ""}
-                onChange={(event) => onSelectModel(event.target.value)}
+                onChange={(event) => onSelectModel?.(event.target.value)}
                 disabled={hasTask}
                 aria-label={t("Model")}
               >
@@ -217,7 +358,7 @@ export function Composer({
                 className="composer-select composer-select--permission"
                 value={profile.permissionMode}
                 onChange={(event) =>
-                  onPermissionMode(event.target.value as TaskPermissionMode)
+                  onPermissionMode?.(event.target.value as TaskPermissionMode)
                 }
                 disabled={isolation === "readOnly"}
                 aria-label={t("Permission mode")}
@@ -228,7 +369,7 @@ export function Composer({
               </select>
             ) : null}
           </div>
-          {taskRunning ? (
+          {actualTaskRunning ? (
             <button
               className="composer__send composer__send--stop"
               type="button"
@@ -262,7 +403,7 @@ export function Composer({
             </div>
             <input
               value={cwd}
-              onChange={(event) => onCwdChange(event.target.value)}
+              onChange={(event) => onCwdChange?.(event.target.value)}
               placeholder={t("Choose a local folder…")}
               aria-label={t("Project folder")}
             />
@@ -281,7 +422,7 @@ export function Composer({
               className="composer-select project-picker__isolation"
               value={isolation}
               onChange={(event) =>
-                onIsolation(event.target.value as TaskIsolation)
+                onIsolation?.(event.target.value as TaskIsolation)
               }
             >
               <option value="worktree" disabled={!repositoryInfo}>
