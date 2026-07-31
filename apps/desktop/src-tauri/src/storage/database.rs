@@ -17,8 +17,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-pub const LATEST_SCHEMA_VERSION: i64 = 1;
+pub const LATEST_SCHEMA_VERSION: i64 = 2;
 const MIGRATION_001: &str = include_str!("migrations/001_initial.sql");
+const MIGRATION_002: &str = include_str!("migrations/002_pinned.sql");
 const MAX_LEGACY_STORE_BYTES: u64 = 32 * 1024 * 1024;
 static DATABASE_INITIALIZE_LOCK: Mutex<()> = Mutex::new(());
 
@@ -146,6 +147,26 @@ fn migrate(connection: &mut Connection, paths: &AppPaths) -> Result<(), String> 
                 .pragma_update(None, "user_version", 1_i64)
                 .map_err(|error| format!("set SQLite schema version: {error}"))?;
         }
+        if current < 2 {
+            transaction
+                .execute_batch(MIGRATION_002)
+                .map_err(|error| format!("apply SQLite migration 002: {error}"))?;
+            transaction
+                .execute(
+                    "INSERT INTO migrations(version, name, checksum, applied_at)
+                     VALUES (?1, ?2, ?3, ?4)",
+                    params![
+                        2_i64,
+                        "pinned",
+                        sha256_hex(MIGRATION_002.as_bytes()),
+                        unix_millis()?
+                    ],
+                )
+                .map_err(|error| format!("record SQLite migration 002: {error}"))?;
+            transaction
+                .pragma_update(None, "user_version", 2_i64)
+                .map_err(|error| format!("set SQLite schema version: {error}"))?;
+        }
         transaction
             .commit()
             .map_err(|error| format!("commit SQLite migration: {error}"))
@@ -177,7 +198,7 @@ fn verify_schema(connection: &Connection) -> Result<(), String> {
             |row| row.get(0),
         )
         .map_err(|error| format!("verify SQLite migration ledger: {error}"))?;
-    let expected = sha256_hex(MIGRATION_001.as_bytes());
+    let expected = sha256_hex(MIGRATION_002.as_bytes());
     if recorded_checksum != expected {
         return Err(
             "SQLite migration checksum does not match this build; refusing to continue".into(),
