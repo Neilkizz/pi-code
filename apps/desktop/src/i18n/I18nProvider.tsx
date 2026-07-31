@@ -195,6 +195,8 @@ const zhCN: Record<string, string> = {
     "确定要永久删除此会话吗？",
   "No archived sessions": "没有已归档的会话",
   Archived: "已归档",
+  Close: "关闭",
+  Cancel: "取消",
   "Local environment": "本地环境",
   "not started": "未开始",
   connecting: "正在连接",
