@@ -562,7 +562,7 @@ npm run desktop:dmg
 | NEXT-U02 | Files Search + Light Editor | Workspace API | 5 人日 | ✅ 10k 文件、二进制、编码、磁盘冲突 | 写入能力 Feature Flag |
 | NEXT-U03 | Timeline GFM + 三档密度 + 虚拟化 | Event Store | 6 人日 | ✅ 10k Event、代码块、表格、复制、VoiceOver | 回退当前 Normal Renderer |
 | NEXT-U04 | Session Rename/Search/Pin/Trash | SQLite | 5 人日 | ✅ 归档恢复、LIKE 搜索、Pin、Trash 手动删除 | 30 天自动清理留待后续；不物理删除 Worktree |
-| NEXT-U05 | Pane Layout v1 | U01–U03 | 7 人日 | Chat/Diff/File/Terminal 拆分、恢复、窄窗 | 保留固定 Workspace 布局 |
+| NEXT-U05 | Pane Layout v1 | U01–U03 | 7 人日 | ✅ Chat/Diff/File/Terminal 拆分、恢复、预设、窄窗切页 | 保留固定 Workspace 布局 |
 
 ### 9.2 P1：完成日常 Agent 工作流
 

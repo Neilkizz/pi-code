@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type {
   DesktopHostStatus,
   DesktopTaskState,
@@ -16,6 +16,11 @@ import { Composer } from "../composer/Composer";
 import { Timeline } from "../timeline/Timeline";
 import { TaskTerminal } from "../terminal/TaskTerminal";
 import { WorkspaceInspector } from "../workspace/WorkspaceInspector";
+import { PaneLayout } from "../workspace/PaneLayout";
+import {
+  usePaneLayoutState,
+  type LayoutPreset,
+} from "../workspace/paneLayoutState";
 import { useI18n } from "../../i18n/I18nProvider";
 import { compactPath, permissionModeLabel } from "./presentation";
 import type { TaskViewState } from "./types";
@@ -100,8 +105,16 @@ export function SessionWorkspace({
   onError,
 }: SessionWorkspaceProps) {
   const { t } = useI18n();
-  const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [terminalOpen, setTerminalOpen] = useState(false);
+  const {
+    config,
+    selectPreset,
+    toggleInspector,
+    toggleTerminal,
+    setSideWidth,
+    setTerminalHeight,
+    resetLayout,
+  } = usePaneLayoutState();
+
   const taskContext = [
     record ? compactPath(record.cwd) : t("Local environment"),
     record?.worktree?.branch,
@@ -116,12 +129,76 @@ export function SessionWorkspace({
     function handleShortcut(event: KeyboardEvent): void {
       if (event.metaKey && !event.altKey && event.key.toLocaleLowerCase() === "j") {
         event.preventDefault();
-        if (record) setTerminalOpen((current) => !current);
+        if (record) toggleTerminal();
       }
     }
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [record]);
+  }, [record, toggleTerminal]);
+
+  const chatPane = (
+    <div
+      className={`conversation ${
+        record ? "conversation--task" : "conversation--new"
+      }`}
+    >
+      <Timeline
+        hasTask={Boolean(record)}
+        taskView={taskView}
+        taskConnected={taskConnected}
+        taskRunning={taskRunning}
+        taskError={runtimeTask?.error}
+        showActivity
+      />
+      <ApprovalShelf requests={permissions} onResolve={onPermission} />
+      <Composer
+        hasTask={Boolean(record)}
+        cwd={cwd}
+        prompt={prompt}
+        attachments={attachments}
+        profile={profile}
+        isolation={isolation}
+        repositoryInfo={repositoryInfo}
+        projectCheck={projectCheck}
+        projectCheckMessage={projectCheckMessage}
+        endpoints={endpoints}
+        selectedEndpoint={selectedEndpoint}
+        hostReady={hostReady}
+        taskConnected={taskConnected}
+        taskRunning={taskRunning}
+        isSubmitting={isSubmitting}
+        onCwdChange={onCwdChange}
+        onPromptChange={onPromptChange}
+        onAttach={onAttach}
+        onRemoveAttachment={onRemoveAttachment}
+        onChooseProject={onChooseProject}
+        onUseScratchWorkspace={onUseScratchWorkspace}
+        onSelectEndpoint={onSelectEndpoint}
+        onSelectModel={onSelectModel}
+        onPermissionMode={onPermissionMode}
+        onIsolation={onIsolation}
+        onSubmit={onSubmit}
+        onAbort={onAbort}
+      />
+    </div>
+  );
+
+  const inspectorPane = record ? (
+    <WorkspaceInspector
+      task={record}
+      runtimeStatus={runtimeTask?.status}
+      activities={taskView.activities}
+      onError={onError}
+    />
+  ) : undefined;
+
+  const terminalPane = record ? (
+    <TaskTerminal
+      task={record}
+      onClose={toggleTerminal}
+      onError={onError}
+    />
+  ) : undefined;
 
   return (
     <section className="session-workspace">
@@ -140,13 +217,42 @@ export function SessionWorkspace({
         </div>
         <div className="session-toolbar__status">
           {record ? (
+            <div className="layout-preset-selector">
+              <select
+                className="layout-preset-select"
+                value={config.preset}
+                onChange={(e) => selectPreset(e.target.value as LayoutPreset)}
+                aria-label={t("Layout")}
+                title={t("Layout")}
+              >
+                <option value="chat-inspector">{t("Chat + Inspector")}</option>
+                <option value="chat-terminal">{t("Chat + Terminal")}</option>
+                <option value="three-pane">{t("3-Pane")}</option>
+                <option value="chat-only">{t("Chat only")}</option>
+                {config.preset === "custom" ? (
+                  <option value="custom">{t("Custom")}</option>
+                ) : null}
+              </select>
+              {config.preset === "custom" || config.sideWidth !== 360 || config.terminalHeight !== 240 ? (
+                <button
+                  className="layout-reset-button"
+                  type="button"
+                  onClick={resetLayout}
+                  title={t("Reset layout")}
+                >
+                  {t("Reset")}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {record ? (
             <button
               className={`terminal-button ${
-                terminalOpen ? "terminal-button--active" : ""
+                config.terminalOpen ? "terminal-button--active" : ""
               }`}
               type="button"
-              onClick={() => setTerminalOpen((current) => !current)}
-              aria-pressed={terminalOpen}
+              onClick={toggleTerminal}
+              aria-pressed={config.terminalOpen}
               title={t("Toggle user terminal (⌘J)")}
             >
               {t("Terminal")}
@@ -155,11 +261,11 @@ export function SessionWorkspace({
           {record ? (
             <button
               className={`review-button ${
-                inspectorOpen ? "review-button--active" : ""
+                config.inspectorOpen ? "review-button--active" : ""
               }`}
               type="button"
-              onClick={() => setInspectorOpen((current) => !current)}
-              aria-pressed={inspectorOpen}
+              onClick={toggleInspector}
+              aria-pressed={config.inspectorOpen}
               title={t("Toggle project review pane")}
             >
               {t("Review")}
@@ -192,71 +298,17 @@ export function SessionWorkspace({
         </div>
       </header>
 
-      <div
-        className={`session-stage ${
-          record && inspectorOpen ? "session-stage--inspector" : ""
-        }`}
-      >
-        <div
-          className={`conversation ${
-            record ? "conversation--task" : "conversation--new"
-          }`}
-        >
-          <Timeline
-            hasTask={Boolean(record)}
-            taskView={taskView}
-            taskConnected={taskConnected}
-            taskRunning={taskRunning}
-            taskError={runtimeTask?.error}
-            showActivity
-          />
-          <ApprovalShelf requests={permissions} onResolve={onPermission} />
-          <Composer
-            hasTask={Boolean(record)}
-            cwd={cwd}
-            prompt={prompt}
-            attachments={attachments}
-            profile={profile}
-            isolation={isolation}
-            repositoryInfo={repositoryInfo}
-            projectCheck={projectCheck}
-            projectCheckMessage={projectCheckMessage}
-            endpoints={endpoints}
-            selectedEndpoint={selectedEndpoint}
-            hostReady={hostReady}
-            taskConnected={taskConnected}
-            taskRunning={taskRunning}
-            isSubmitting={isSubmitting}
-            onCwdChange={onCwdChange}
-            onPromptChange={onPromptChange}
-            onAttach={onAttach}
-            onRemoveAttachment={onRemoveAttachment}
-            onChooseProject={onChooseProject}
-            onUseScratchWorkspace={onUseScratchWorkspace}
-            onSelectEndpoint={onSelectEndpoint}
-            onSelectModel={onSelectModel}
-            onPermissionMode={onPermissionMode}
-            onIsolation={onIsolation}
-            onSubmit={onSubmit}
-            onAbort={onAbort}
-          />
-        </div>
-        {record && inspectorOpen ? (
-          <WorkspaceInspector
-            task={record}
-            runtimeStatus={runtimeTask?.status}
-            activities={taskView.activities}
-            onError={onError}
-          />
-        ) : null}
-      </div>
-      {record && terminalOpen ? (
-        <TaskTerminal
-          task={record}
-          onClose={() => setTerminalOpen(false)}
-          onError={onError}
-        />
-      ) : null}
+      <PaneLayout
+        chatPane={chatPane}
+        inspectorPane={inspectorPane}
+        terminalPane={terminalPane}
+        config={config}
+        hasRecord={Boolean(record)}
+        onSideWidthChange={setSideWidth}
+        onTerminalHeightChange={setTerminalHeight}
+        onResetSideWidth={resetLayout}
+        onResetTerminalHeight={resetLayout}
+      />
     </section>
   );
 }
