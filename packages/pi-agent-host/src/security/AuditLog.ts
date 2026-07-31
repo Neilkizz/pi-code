@@ -44,8 +44,8 @@ export class AuditLog {
       return [];
     }
     const content = fs.readFileSync(this.logPath, 'utf8');
-    const lines = content.split('\n').filter((line) => line.trim().length > 0);
-    return lines.map((line) => JSON.parse(line));
+    const lines = content.split('\n').filter((line: string) => line.trim().length > 0);
+    return lines.map((line: string) => JSON.parse(line));
   }
 
   private persistSync(entry: AuditEntry): void {
