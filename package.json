@@ -8,6 +8,8 @@
     "host:build": "npm --prefix packages/pi-agent-host run build",
     "protocol:build": "npm --prefix packages/protocol run build",
     "test": "npm --prefix apps/desktop run test:unit",
+    "test:unit": "npm --prefix apps/desktop run test:unit",
+    "format:check": "echo 'No formatting check specified'",
     "typecheck": "tsc --noEmit -p apps/desktop/tsconfig.json"
   }
 }
