@@ -101,6 +101,77 @@ impl TaskRepository {
         get_with_connection(&connection, id)?
             .ok_or_else(|| format!("Task disappeared after archive: {id}"))
     }
+
+    pub fn rename(database_path: &Path, id: &str, title: &str) -> Result<TaskRecord, String> {
+        let connection = Database::open(database_path.to_path_buf())?.connection()?;
+        let task = get_with_connection(&connection, id)?
+            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        if task.archived {
+            return Err("Cannot rename an archived task".into());
+        }
+        let now = unix_millis()?;
+        connection
+            .execute(
+                "UPDATE tasks SET title = ?1, updated_at = ?2 WHERE id = ?3 AND archived = 0",
+                params![title, now as i64, id],
+            )
+            .map_err(|error| format!("rename task: {error}"))?;
+        get_with_connection(&connection, id)?
+            .ok_or_else(|| format!("Task disappeared after rename: {id}"))
+    }
+
+    pub fn pin(database_path: &Path, id: &str, pinned: bool) -> Result<TaskRecord, String> {
+        let connection = Database::open(database_path.to_path_buf())?.connection()?;
+        let task = get_with_connection(&connection, id)?
+            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        if task.archived {
+            return Err("Cannot pin an archived task".into());
+        }
+        connection
+            .execute(
+                "UPDATE tasks SET pinned = ?1 WHERE id = ?2 AND archived = 0",
+                params![i64::from(pinned), id],
+            )
+            .map_err(|error| format!("pin task: {error}"))?;
+        get_with_connection(&connection, id)?
+            .ok_or_else(|| format!("Task disappeared after pin: {id}"))
+    }
+
+    pub fn search(database_path: &Path, query: &str) -> Result<Vec<TaskRecord>, String> {
+        let connection = Database::open(database_path.to_path_buf())?.connection()?;
+        let pattern = format!("%{}%", query);
+        let sql = task_select_sql("WHERE t.archived = 0 AND (t.title LIKE ?1 OR e.cwd LIKE ?2)");
+        let mut statement = connection
+            .prepare(&sql)
+            .map_err(|error| format!("prepare task search: {error}"))?;
+        let rows = statement
+            .query_map(params![pattern, pattern], map_task_row)
+            .map_err(|error| format!("query task search: {error}"))?;
+        let mut tasks = Vec::new();
+        for row in rows {
+            tasks.push(
+                row.map_err(|error| format!("read task row: {error}"))?
+                    .decode()?,
+            );
+        }
+        Ok(tasks)
+    }
+
+    pub fn delete(database_path: &Path, id: &str) -> Result<(), String> {
+        let connection = Database::open(database_path.to_path_buf())?.connection()?;
+        let task = get_with_connection(&connection, id)?
+            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        if !task.archived {
+            return Err("Cannot delete an active task; only archived tasks can be deleted".into());
+        }
+        connection
+            .execute(
+                "DELETE FROM tasks WHERE id = ?1 AND archived = 1",
+                params![id],
+            )
+            .map_err(|error| format!("delete task: {error}"))?;
+        Ok(())
+    }
 }
 
 fn get_with_connection(connection: &Connection, id: &str) -> Result<Option<TaskRecord>, String> {
@@ -391,6 +462,325 @@ mod tests {
                 .len(),
             1
         );
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn rename_updates_title_and_timestamp() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("rename-project");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Old title".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        let renamed =
+            TaskRepository::rename(&paths.database_file, &task.id, "New title").unwrap();
+        assert_eq!(renamed.title, "New title");
+        assert!(renamed.updated_at >= task.updated_at);
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn rename_archived_task_fails() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("rename-archived");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Will archive".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::archive(&paths.database_file, &task.id, true).unwrap();
+        let result = TaskRepository::rename(&paths.database_file, &task.id, "New");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("archived"));
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn pin_toggles_pinned_flag() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("pin-project");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Pin me".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        assert!(!task.pinned);
+
+        let pinned = TaskRepository::pin(&paths.database_file, &task.id, true).unwrap();
+        assert!(pinned.pinned);
+
+        let unpinned = TaskRepository::pin(&paths.database_file, &task.id, false).unwrap();
+        assert!(!unpinned.pinned);
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn pin_archived_task_fails() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("pin-archived");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Archived pin".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::archive(&paths.database_file, &task.id, true).unwrap();
+        let result = TaskRepository::pin(&paths.database_file, &task.id, true);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("archived"));
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn search_matches_title_and_path() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let alpha = paths.root.join("alpha-project");
+        let beta = paths.root.join("beta-project");
+        fs::create_dir_all(&alpha).unwrap();
+        fs::create_dir_all(&beta).unwrap();
+        TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Build API".into()),
+                cwd: alpha.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Fix UI bug".into()),
+                cwd: beta.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+
+        let results = TaskRepository::search(&paths.database_file, "API").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Build API");
+
+        let results = TaskRepository::search(&paths.database_file, "alpha").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Build API");
+
+        let results = TaskRepository::search(&paths.database_file, "nonexistent").unwrap();
+        assert!(results.is_empty());
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn search_excludes_archived() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("search-archived");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Login fix".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::archive(&paths.database_file, &task.id, true).unwrap();
+        let results = TaskRepository::search(&paths.database_file, "Login").unwrap();
+        assert!(results.is_empty());
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn delete_removes_archived_task() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("delete-project");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("To delete".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::archive(&paths.database_file, &task.id, true).unwrap();
+        TaskRepository::delete(&paths.database_file, &task.id).unwrap();
+        assert!(TaskRepository::get(&paths.database_file, &task.id)
+            .unwrap()
+            .is_none());
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn delete_active_task_fails() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("delete-active");
+        fs::create_dir_all(&project).unwrap();
+        let task = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("Active task".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        let result = TaskRepository::delete(&paths.database_file, &task.id);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("archived"));
+        fs::remove_dir_all(paths.root).unwrap();
+    }
+
+    #[test]
+    fn list_sorts_pinned_first() {
+        let paths = test_paths();
+        Database::initialize(&paths).unwrap();
+        let project = paths.root.join("sort-project");
+        fs::create_dir_all(&project).unwrap();
+        let a = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("A".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        let b = TaskRepository::save(
+            &paths.database_file,
+            TaskDraft {
+                id: None,
+                title: Some("B".into()),
+                cwd: project.display().to_string(),
+                project_root: None,
+                isolation: Some(TaskIsolation::CurrentCheckout),
+                worktree: None,
+                profile: TaskRuntimeProfile {
+                    provider_id: None,
+                    model_id: None,
+                    permission_mode: "ask".into(),
+                },
+            },
+        )
+        .unwrap();
+        TaskRepository::pin(&paths.database_file, &b.id, true).unwrap();
+
+        let tasks = TaskRepository::list(&paths.database_file, false).unwrap();
+        assert_eq!(tasks.len(), 2);
+        assert!(tasks[0].pinned);
+        assert_eq!(tasks[0].title, "B");
+        assert!(!tasks[1].pinned);
+        assert_eq!(tasks[1].title, "A");
         fs::remove_dir_all(paths.root).unwrap();
     }
 }
