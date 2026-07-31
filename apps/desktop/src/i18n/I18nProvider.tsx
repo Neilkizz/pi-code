@@ -197,6 +197,8 @@ const zhCN: Record<string, string> = {
   Archived: "已归档",
   Close: "关闭",
   Cancel: "取消",
+  Pinned: "已置顶",
+  "More actions": "更多操作",
   "Local environment": "本地环境",
   "not started": "未开始",
   connecting: "正在连接",

@@ -871,6 +871,15 @@ export function App() {
     }
   }
 
+  async function refreshTasks(): Promise<void> {
+    try {
+      const fresh = await listTasks(false);
+      setTasks(sortTasks(fresh));
+    } catch (cause: unknown) {
+      showError(cause);
+    }
+  }
+
   function beginNewTask(): void {
     setActiveView("tasks");
     setActiveTaskId(null);
@@ -1360,6 +1369,7 @@ export function App() {
           onSelectTask={(task) => void selectTask(task)}
           onRestartHost={() => void restartHost()}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+          onTasksChanged={() => void refreshTasks()}
         />
       }
     >

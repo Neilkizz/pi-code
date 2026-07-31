@@ -1408,6 +1408,10 @@ summary:focus-visible {
 }
 
 /* Session context menu */
+.session-link-wrapper {
+  position: relative;
+}
+
 .session-link {
   position: relative;
 }
