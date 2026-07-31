@@ -43,6 +43,7 @@ export interface PersistedTask {
   worktree?: TaskWorktree;
   profile: TaskRuntimeProfile;
   archived: boolean;
+  pinned: boolean;
   createdAt: number;
   updatedAt: number;
   lastOpenedAt: number;
