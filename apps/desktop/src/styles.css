@@ -1407,3 +1407,233 @@ summary:focus-visible {
   background: var(--accent-soft);
 }
 
+/* Session context menu */
+.session-link {
+  position: relative;
+}
+
+.session-link__menu {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-tertiary);
+  line-height: 1;
+  z-index: 2;
+}
+
+.session-link:hover .session-link__menu {
+  display: flex;
+}
+
+.session-link__menu:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+/* Pin indicator */
+.session-link__pin {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  margin-right: 2px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* Context menu popover */
+.context-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card, 6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--font-ui-xs);
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.context-menu__item:hover {
+  background: var(--surface-muted);
+}
+
+.context-menu__item--danger {
+  color: var(--danger);
+}
+
+/* Inline rename input */
+.session-rename-input {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--font-ui-xs);
+  outline: none;
+}
+
+/* Trash view */
+.trash-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px;
+  overflow: auto;
+}
+
+.trash-view__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.trash-view__header h2 {
+  font-size: var(--font-ui-base);
+  font-weight: 680;
+  margin: 0;
+}
+
+.trash-view__header button {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.trash-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  margin-bottom: 6px;
+}
+
+.trash-item__info {
+  min-width: 0;
+}
+
+.trash-item__info strong {
+  font-size: var(--font-ui-sm);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trash-item__info small {
+  font-size: var(--font-ui-xs);
+  color: var(--text-tertiary);
+}
+
+.trash-item__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.trash-item__actions button {
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-ui-xs);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.trash-item__actions button:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.trash-item__actions button.trash-item__delete {
+  color: var(--danger);
+}
+
+.trash-item__actions button.trash-item__delete:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+/* Confirm dialog overlay */
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 200;
+}
+
+.confirm-dialog__box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card, 8px);
+  padding: 20px;
+  max-width: 360px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.confirm-dialog__box p {
+  margin: 0 0 16px;
+  font-size: var(--font-ui-sm);
+  line-height: 1.5;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-dialog__actions button {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-ui-xs);
+  cursor: pointer;
+}
+
+.confirm-dialog__actions button.confirm-dialog__confirm {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+

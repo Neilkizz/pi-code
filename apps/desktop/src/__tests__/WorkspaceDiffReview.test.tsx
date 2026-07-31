@@ -39,6 +39,7 @@ const task: PersistedTask = {
   isolation: "worktree",
   profile: { permissionMode: "ask" },
   archived: false,
+  pinned: false,
   createdAt: 0,
   updatedAt: 0,
   lastOpenedAt: 0,
