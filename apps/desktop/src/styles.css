@@ -730,6 +730,160 @@ summary:focus-visible {
   color: var(--text-secondary);
 }
 
+/* Interactive Diff Review */
+.diff-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.diff-review__filebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.diff-review__filebar > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.diff-review__filebar strong {
+  font-size: var(--font-ui-sm);
+}
+
+.diff-review__filebar span {
+  font-size: var(--font-ui-xs);
+  color: var(--text-tertiary);
+}
+
+.diff-review__fileactions {
+  display: flex;
+  gap: 6px;
+}
+
+.diff-review__fileactions button,
+.diff-hunk__bar button {
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--font-ui-xs);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.diff-review__fileactions button:hover:not(:disabled),
+.diff-hunk__bar button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.diff-review__fileactions button:disabled,
+.diff-hunk__bar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.diff-review__danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line)) !important;
+}
+
+.diff-review__danger:hover:not(:disabled) {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+.diff-review__primary {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.diff-review__hint {
+  margin: 0;
+  padding: 8px;
+  font-size: var(--font-ui-xs);
+  color: var(--text-tertiary);
+}
+
+.diff-hunk {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.diff-hunk--reverted {
+  opacity: 0.62;
+}
+
+.diff-hunk__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--surface-muted) 60%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+
+.diff-hunk__header {
+  font-family: monospace;
+  font-size: var(--font-ui-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-view {
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.code-view > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.code-view > div > span {
+  flex: 0 0 28px;
+  text-align: right;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.code-view code {
+  white-space: pre;
+}
+
+.diff-line--added {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+}
+
+.diff-line--deleted {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.code-view__limit {
+  padding: 6px 8px;
+  font-size: var(--font-ui-xs);
+  color: var(--text-tertiary);
+  border-top: 1px dashed var(--line);
+}
+
 /* Glassmorphism Composer & Mentions Autocomplete */
 .prompt-dock {
   position: relative;

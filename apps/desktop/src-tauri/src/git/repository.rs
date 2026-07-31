@@ -1,7 +1,8 @@
 use serde::Serialize;
 use std::{
+    io::Write,
     path::{Path, PathBuf},
-    process::{Command, Output},
+    process::{Command, Output, Stdio},
 };
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -56,6 +57,34 @@ pub(crate) fn run_git(cwd: &Path, args: &[&str]) -> Result<Output, String> {
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("LC_ALL", "C")
         .output()
+        .map_err(|error| format!("Failed to run git: {error}"))
+}
+
+/// Same as [`run_git`] but feeds `stdin_bytes` to the child (used by `git apply`,
+/// which reads the patch from stdin).
+pub(crate) fn run_git_stdin(
+    cwd: &Path,
+    args: &[&str],
+    stdin_bytes: &[u8],
+) -> Result<Output, String> {
+    let mut child = Command::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("LC_ALL", "C")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("Failed to run git: {error}"))?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| "Failed to open git stdin".to_string())?
+        .write_all(stdin_bytes)
+        .map_err(|error| format!("Failed to write git stdin: {error}"))?;
+    child
+        .wait_with_output()
         .map_err(|error| format!("Failed to run git: {error}"))
 }
 

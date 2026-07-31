@@ -10,6 +10,10 @@ use std::{
 };
 use walkdir::{DirEntry, WalkDir};
 
+pub(crate) mod apply;
+
+pub use apply::WorkspacePatchResult;
+
 const MAX_WORKSPACE_FILES: usize = 2_500;
 const MAX_FILE_BYTES: usize = 1024 * 1024;
 const MAX_DIFF_BYTES: usize = 2 * 1024 * 1024;
@@ -185,7 +189,7 @@ pub fn diff(
     })
 }
 
-fn task_root(database_path: &Path, task_id: &str) -> Result<PathBuf, String> {
+pub(super) fn task_root(database_path: &Path, task_id: &str) -> Result<PathBuf, String> {
     let task = TaskRepository::get(database_path, task_id)?
         .ok_or_else(|| format!("Unknown task: {task_id}"))?;
     if task.archived {
@@ -252,7 +256,7 @@ fn should_visit(entry: &DirEntry) -> bool {
     )
 }
 
-fn git_changes(root: &Path) -> Result<Vec<WorkspaceChange>, String> {
+pub(super) fn git_changes(root: &Path) -> Result<Vec<WorkspaceChange>, String> {
     let args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
     let output = run_git(root, &args)?;
     if !output.status.success() {
@@ -332,7 +336,10 @@ fn is_generated_path(path: &str) -> bool {
     )
 }
 
-fn resolve_existing_file(root: &Path, relative_path: &str) -> Result<(String, PathBuf), String> {
+pub(super) fn resolve_existing_file(
+    root: &Path,
+    relative_path: &str,
+) -> Result<(String, PathBuf), String> {
     let relative = validate_relative_path(relative_path)?;
     let path = root.join(&relative);
     let canonical = path
@@ -344,7 +351,7 @@ fn resolve_existing_file(root: &Path, relative_path: &str) -> Result<(String, Pa
     Ok((relative, canonical))
 }
 
-fn validate_relative_path(relative_path: &str) -> Result<String, String> {
+pub(super) fn validate_relative_path(relative_path: &str) -> Result<String, String> {
     if relative_path.trim().is_empty() {
         return Err("Workspace path cannot be empty".into());
     }

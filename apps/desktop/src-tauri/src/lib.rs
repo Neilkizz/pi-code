@@ -33,7 +33,7 @@ use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 use terminal::{TerminalLaunch, TerminalManager};
 use updates::{AutomaticUpdateReport, PiAgentUpdateStatus, UpdatePreferences};
-use workspace::{WorkspaceDiff, WorkspaceFileContent, WorkspaceSnapshot};
+use workspace::{WorkspaceDiff, WorkspaceFileContent, WorkspacePatchResult, WorkspaceSnapshot};
 
 #[tauri::command]
 fn desktop_bootstrap(app: tauri::AppHandle) -> Result<DesktopBootstrap, String> {
@@ -164,6 +164,32 @@ fn workspace_diff_read(
 ) -> Result<WorkspaceDiff, String> {
     let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
     workspace::diff(&paths.database_file, &task_id, relative_path.as_deref())
+}
+
+#[tauri::command]
+fn workspace_diff_apply(
+    app: tauri::AppHandle,
+    task_id: String,
+    relative_path: String,
+    operation: String,
+    hunk_body: Option<String>,
+    old_start: Option<usize>,
+    old_lines: Option<usize>,
+    new_start: Option<usize>,
+    new_lines: Option<usize>,
+) -> Result<WorkspacePatchResult, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    workspace::apply::apply_patch(
+        &paths,
+        &task_id,
+        &relative_path,
+        &operation,
+        hunk_body.as_deref(),
+        old_start,
+        old_lines,
+        new_start,
+        new_lines,
+    )
 }
 
 #[tauri::command]
@@ -831,6 +857,7 @@ pub fn run() {
             workspace_snapshot,
             workspace_file_read,
             workspace_diff_read,
+            workspace_diff_apply,
             git_repository_inspect,
             git_worktree_create,
             git_worktree_inspect,

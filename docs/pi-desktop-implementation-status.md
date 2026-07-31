@@ -102,6 +102,17 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 `Timeline.test.tsx` 覆盖“底部跟随”“上翻不抢滚动”“工具输入输出详情”三条行为；`npm --prefix apps/desktop run test:unit`（10/10 通过）、`npm --prefix apps/desktop run build`（通过）、`cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml`（通过）和 `git diff --check`（通过）。开发脚本新增 `npm run tauri:dev:isolated`，使用独立的 `com.piagent.desktop.dev` 数据目录，防止旧 `.app` 的用户数据或同 Bundle ID 窗口污染 UI 回归。
 
+### V3 Interactive Diff Review 实施进度（2026-07-31）
+
+1. Workspace Inspector 的 Diff 标签已从只读升级为可交互审查：单个文件按 Hunk 提供 `Revert`（撤销该块）与已撤销块的 `Keep`（重新应用），文件级提供 `Revert file`；未跟踪文件整文件提供 `Keep file` / `Delete file`；
+2. 新增 `workspace_diff_apply` Tauri Command：通过 `git apply` / `git apply --reverse` 把前端解析出的单个 Hunk 或整文件 diff 应用到任务工作区，Rust 端只信任前端提交的 Hunk 体并在应用前做路径边界、Symlink 与“差异过期”守卫；
+3. 外部修改/冲突检测由 `git apply` 的原子上下文匹配天然提供：文件在审查期间被改动则干净失败并提示刷新；相邻 Hunk 的重新应用失败同样提示刷新，只读视图保留为回退；
+4. 未跟踪文件 Revert 前先把文件内容备份到 App Data（`backups/diff-review/<task>/`），`Keep` 可恢复，实现操作可撤销；Keep↔Revert 双向可逆；
+5. 每次 Keep/Revert 写入 `audit_log`（actor `user`，action `diff.keep` / `diff.revert`），Security Audit 页可追溯；
+6. 全量 diff 的“All changes”聚合视图保持只读（路径未知时不混合同一文件的 Hunk），并提示先选择单个文件。
+
+验证证据：新增 `workspace::apply` Rust 测试 9 项（单 Hunk 撤销保留其他 Hunk 与无关改动、Keep 重新应用、整文件回退到 HEAD、外部修改拒绝、Symlink/路径穿越/已归档拒绝、未跟踪删除与恢复、审计行写入）全部通过，Rust 全量测试 54/54；新增前端 `parseUnifiedDiff.test.ts` 与 `WorkspaceDiffReview.test.tsx`（Hunk 解析、点击 Revert 调用桥接、聚合视图只读）；`npm --prefix apps/desktop run test:unit`（24/24 通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo fmt --check`（通过）与 `git diff --check`（通过）。
+
 ---
 
 ## 2. 当前运行架构

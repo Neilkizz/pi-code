@@ -479,6 +479,20 @@ const zhCN: Record<string, string> = {
     "部分扩展启动失败，已仅为此任务停用",
   "Pi did not acknowledge {command}.": "Pi 未确认命令 {command}。",
   "Automatic update completed with warnings": "自动更新完成，但存在警告",
+  Keep: "保留",
+  Revert: "撤销",
+  "Revert file": "撤销文件",
+  "Keep file": "保留文件",
+  "Delete file": "删除文件",
+  "Apply change": "应用更改",
+  "Applying…": "应用更改中…",
+  "Untracked file": "未跟踪文件",
+  "Delete to remove, or keep as part of this task.":
+    "删除以移除，或保留作为本任务的一部分。",
+  "Review each hunk, then revert what should not change.":
+    "逐块审查，撤销不应发生的更改。",
+  "Select a changed file to review and revert individual hunks.":
+    "选择发生更改的文件，以审查并撤销单个变更块。",
 };
 
 const enUS: Record<string, string> = {

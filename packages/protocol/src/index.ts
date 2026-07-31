@@ -76,6 +76,9 @@ export type {
   WorkspaceDiff,
   WorkspaceFileContent,
   WorkspaceFileEntry,
+  WorkspaceHunkOperation,
+  WorkspaceHunkRef,
+  WorkspacePatchResult,
   WorkspaceSnapshot,
   WorktreeInfo,
 } from "./messages.js";

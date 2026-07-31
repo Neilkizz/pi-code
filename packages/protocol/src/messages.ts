@@ -246,6 +246,29 @@ export interface WorkspaceDiff {
   generatedAt: number;
 }
 
+export type WorkspaceHunkOperation = "keep" | "revert";
+
+/** One unified-diff hunk, identified by its old/new line ranges plus the verbatim
+ *  hunk body (the `@@` header line and its context/added/removed lines). The body
+ *  lets Keep re-apply a hunk that was previously reverted, since git apply matches
+ *  against the file's current content. */
+export interface WorkspaceHunkRef {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  body: string;
+}
+
+export interface WorkspacePatchResult {
+  ok: boolean;
+  operation: WorkspaceHunkOperation;
+  path: string;
+  /** Number of hunks applied (1 for a single hunk, all for a whole-file op). */
+  appliedHunks: number;
+  message?: string;
+}
+
 export interface TerminalLaunch {
   taskId: string;
   pid: number;

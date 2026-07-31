@@ -32,6 +32,9 @@ import type {
   UpdatePreferences,
   WorkspaceDiff,
   WorkspaceFileContent,
+  WorkspaceHunkOperation,
+  WorkspaceHunkRef,
+  WorkspacePatchResult,
   WorkspaceSnapshot,
   WorktreeInfo,
 } from "@pi-desktop/protocol";
@@ -224,6 +227,24 @@ export async function readWorkspaceDiff(
   return invoke<WorkspaceDiff>("workspace_diff_read", {
     taskId,
     relativePath,
+  });
+}
+
+export async function applyWorkspacePatch(
+  taskId: string,
+  relativePath: string,
+  operation: WorkspaceHunkOperation,
+  hunk?: WorkspaceHunkRef,
+): Promise<WorkspacePatchResult> {
+  return invoke<WorkspacePatchResult>("workspace_diff_apply", {
+    taskId,
+    relativePath,
+    operation,
+    hunkBody: hunk?.body,
+    oldStart: hunk?.oldStart,
+    oldLines: hunk?.oldLines,
+    newStart: hunk?.newStart,
+    newLines: hunk?.newLines,
   });
 }
 
