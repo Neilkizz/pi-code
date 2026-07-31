@@ -133,6 +133,30 @@ export async function archiveTask(
   return invoke<PersistedTask>("task_archive", { id, archived });
 }
 
+export async function renameTask(
+  id: string,
+  title: string,
+): Promise<PersistedTask> {
+  return invoke<PersistedTask>("task_rename", { id, title });
+}
+
+export async function pinTask(
+  id: string,
+  pinned: boolean,
+): Promise<PersistedTask> {
+  return invoke<PersistedTask>("task_pin", { id, pinned });
+}
+
+export async function searchTasks(
+  query: string,
+): Promise<PersistedTask[]> {
+  return invoke<PersistedTask[]>("task_search", { query });
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  return invoke("task_delete", { id });
+}
+
 export async function listAttachments(
   taskId: string,
 ): Promise<TaskAttachment[]> {
