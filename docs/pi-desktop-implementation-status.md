@@ -109,7 +109,8 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 3. 外部修改/冲突检测由 `git apply` 的原子上下文匹配天然提供：文件在审查期间被改动则干净失败并提示刷新；相邻 Hunk 的重新应用失败同样提示刷新，只读视图保留为回退；
 4. 未跟踪文件 Revert 前先把文件内容备份到 App Data（`backups/diff-review/<task>/`），`Keep` 可恢复，实现操作可撤销；Keep↔Revert 双向可逆；
 5. 每次 Keep/Revert 写入 `audit_log`（actor `user`，action `diff.keep` / `diff.revert`），Security Audit 页可追溯；
-6. 全量 diff 的“All changes”聚合视图保持只读（路径未知时不混合同一文件的 Hunk），并提示先选择单个文件。
+6. 全量 diff 的“All changes”聚合视图保持只读（路径未知时不混合同一文件的 Hunk），并提示先选择单个文件；
+7. 真实 `.app` GUI smoke 通过（2026-07-31）：重建 Release 应用后在运行中的应用内完成逐 Hunk 交互——中间 Hunk（`file.txt` 第 25 行）`Revert` 后磁盘恢复为 `line25`，且第 2/40 行改动保持不变（Hunk 独立性）；`Keep` 重新应用还原为 `MIDDLE-CHANGED`（双向可逆）；未跟踪文件 `new.txt` 的 `Delete file` 删除磁盘文件并写入备份 `backups/diff-review/<task>/new.txt`、`Keep file` 从备份恢复原始内容；4 次操作均写入 `audit_log`。
 
 验证证据：新增 `workspace::apply` Rust 测试 9 项（单 Hunk 撤销保留其他 Hunk 与无关改动、Keep 重新应用、整文件回退到 HEAD、外部修改拒绝、Symlink/路径穿越/已归档拒绝、未跟踪删除与恢复、审计行写入）全部通过，Rust 全量测试 54/54；新增前端 `parseUnifiedDiff.test.ts` 与 `WorkspaceDiffReview.test.tsx`（Hunk 解析、点击 Revert 调用桥接、聚合视图只读）；`npm --prefix apps/desktop run test:unit`（24/24 通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo fmt --check`（通过）与 `git diff --check`（通过）。
 
