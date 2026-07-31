@@ -1,0 +1,25 @@
+{
+  "name": "@pi-desktop/pi-agent-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "protocol:build": "npm --prefix ../protocol run build",
+    "prebuild": "npm run protocol:build",
+    "precheck": "npm run protocol:build",
+    "dev": "tsx src/main.ts",
+    "build": "tsc --noEmit false --outDir dist",
+    "check": "tsc --noEmit",
+    "test:smoke": "npm run build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.83.0",
+    "@pi-desktop/protocol": "file:../protocol",
+    "typebox": "1.1.38"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

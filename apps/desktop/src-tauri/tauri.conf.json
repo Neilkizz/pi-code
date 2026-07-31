@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Pi Desktop",
+  "version": "0.1.0",
+  "identifier": "com.piagent.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev:with-host",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build:with-host",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Pi Desktop",
+        "width": 1440,
+        "height": 920,
+        "minWidth": 1080,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "transparent": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": [
+      "../../../resources/icon.png",
+      "../../../resources/icon@2x.png"
+    ],
+    "resources": ["runtime/"],
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    }
+  }
+}

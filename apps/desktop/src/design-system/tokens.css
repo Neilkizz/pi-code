@@ -1,0 +1,109 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    sans-serif;
+  font-synthesis: none;
+
+  --canvas: #f7f5f0;
+  --sidebar: #f0eee8;
+  --surface: #fcfbf8;
+  --surface-raised: #ffffff;
+  --surface-muted: #f2f0ea;
+  --line: #e4e0d7;
+  --line-strong: #cfc9bd;
+  --text: #292722;
+  --text-secondary: #706b62;
+  --text-tertiary: #969087;
+  --accent: #b85e3c;
+  --accent-strong: #a85133;
+  --accent-soft: #f2ded3;
+  --success: #4f7659;
+  --warning: #a66a24;
+  --danger: #b94b48;
+  --info: #4f6f8e;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --font-ui-xs: 11px;
+  --font-ui-sm: 13px;
+  --font-ui-base: 14px;
+  --line-ui-tight: 1.35;
+  --line-ui: 1.5;
+  --control-compact: 28px;
+  --control-default: 32px;
+  --control-comfortable: 36px;
+  --control-touch: 44px;
+  --radius-control: 7px;
+  --radius-card: 10px;
+  --radius-sheet: 14px;
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+  --focus-ring: rgba(184, 94, 60, 0.44);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #1f1f1d;
+  --sidebar: #282826;
+  --surface: #2b2b29;
+  --surface-raised: #30302e;
+  --surface-muted: #353432;
+  --line: #3d3c38;
+  --line-strong: #57534d;
+  --text: #eeeae2;
+  --text-secondary: #b7b1a7;
+  --text-tertiary: #878178;
+  --accent: #d87955;
+  --accent-strong: #e18461;
+  --accent-soft: #4b3027;
+  --success: #75a37f;
+  --warning: #d19a55;
+  --danger: #e07873;
+  --info: #7fa3c3;
+  --focus-ring: rgba(212, 122, 85, 0.58);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --canvas: #1f1f1d;
+    --sidebar: #282826;
+    --surface: #2b2b29;
+    --surface-raised: #30302e;
+    --surface-muted: #353432;
+    --line: #3d3c38;
+    --line-strong: #57534d;
+    --text: #eeeae2;
+    --text-secondary: #b7b1a7;
+    --text-tertiary: #878178;
+    --accent: #d87955;
+    --accent-strong: #e18461;
+    --accent-soft: #4b3027;
+    --success: #75a37f;
+    --warning: #d19a55;
+    --danger: #e07873;
+    --info: #7fa3c3;
+    --focus-ring: rgba(212, 122, 85, 0.58);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: color-mix(in srgb, currentColor 30%, transparent);
+    --line-strong: color-mix(in srgb, currentColor 52%, transparent);
+  }
+}

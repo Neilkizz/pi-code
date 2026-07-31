@@ -1,0 +1,46 @@
+{
+  "name": "@pi-desktop/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "protocol:build": "npm --prefix ../../packages/protocol run build",
+    "prebuild": "npm run protocol:build",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "host:build": "npm --prefix ../../packages/pi-agent-host run build",
+    "runtime:stage": "node scripts/stage-runtime.mjs",
+    "dev:with-host": "npm run host:build && npm run dev",
+    "build:with-host": "npm run host:build && npm run build",
+    "preview": "vite preview",
+    "tauri:dev": "tauri dev",
+    "tauri:dev:isolated": "tauri dev --config src-tauri/tauri.dev.conf.json",
+    "tauri:build": "npm run host:build && npm run runtime:stage && tauri build",
+    "sign:app:adhoc": "codesign --force --deep --sign - --timestamp=none \"src-tauri/target/release/bundle/macos/Pi Desktop.app\"",
+    "tauri:build:app": "npm run host:build && npm run runtime:stage && tauri build --bundles app && npm run sign:app:adhoc",
+    "bundle:smoke": "node scripts/smoke-bundle-runtime.mjs",
+    "dmg": "node scripts/package-dmg.mjs"
+  },
+  "dependencies": {
+    "@pi-desktop/protocol": "file:../../packages/protocol",
+    "@tauri-apps/api": "^2.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.6.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}

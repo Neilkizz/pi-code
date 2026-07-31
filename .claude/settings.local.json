@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf /Users/neilkizz/Documents/Project/.vscode)",
+      "Bash(mkdir -p /Users/neilkizz/Documents/Project/.vscode)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(npm run *)",
+      "Bash(npx vsce *)",
+      "Bash(git -C /Users/neilkizz/Documents/Project log --oneline -20)",
+      "Bash(git -C /Users/neilkizz/Documents/Project branch -a)",
+      "Bash(npm test *)",
+      "Bash(npm ls *)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git commit -m 'baseline: A1-A3 completed state \\(fixes, unit tests, RPC integration tests\\) *)"
+    ]
+  }
+}

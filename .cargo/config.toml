@@ -1,0 +1,7 @@
+[target.aarch64-apple-darwin]
+linker = ".cargo/rust-lld-linker.sh"
+rustflags = ["-C", "linker-flavor=ld64.lld"]
+
+[target.x86_64-apple-darwin]
+linker = ".cargo/rust-lld-linker.sh"
+rustflags = ["-C", "linker-flavor=ld64.lld"]
