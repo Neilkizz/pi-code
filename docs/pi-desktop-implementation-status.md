@@ -169,9 +169,9 @@ Pi Desktop.app
 | 多 Task 并行 | 完成 | 每 Task 独立 Worker、cwd、状态 | 并发上限 UI、资源预算 |
 | Git worktree | 完成 | 创建、检查、安全回收、dirty 拒绝 | Worktree 管理页面、Patch 导出 |
 | Worker 恢复 | 完成 | 崩溃重建、事件序列与去重 | Safe Mode UI、用户可见恢复历史 |
-| Task/Session 持久化 | 部分 | SQLite、归档、恢复、最近任务 | 搜索、重命名、Pin、Trash、Fork Tree |
+| Task/Session 持久化 | 完成 | SQLite、归档、恢复、最近任务、搜索、重命名、Pin、Trash | Fork Tree |
 | Chat/流式/Abort | 完成 | Host ACK、失败回滚、Pi Session 流、终止、冷启动自动重连 | Steer/Follow-up 队列 |
-| Timeline | 部分 | Claude 风格消息层级、完整 Markdown/GFM、复制、Tool、状态与 Activity | 虚拟化、三档密度 |
+| Timeline | 完成 | Claude 风格消息层级、完整 Markdown/GFM、复制、Tool、状态与 Activity、三档密度、虚拟化 | — |
 | Composer | 部分 | Prompt 始终可编辑、首次发送自动建 Session、附件、模型、权限、停止、草稿恢复 | `@` 搜索、粘贴图片、上下文 Token、Steer/Follow-up |
 | 图片/文件附件 | 部分 | 私有复制、哈希、大小限制、图片转发 | PDF 解码/预览、目录 Context Handle |
 | API Endpoint GUI | 完成 | Keychain、增删改、测试、默认模型 | Route Group、Fallback、能力矩阵 |
@@ -560,8 +560,8 @@ npm run desktop:dmg
 |---|---|---|---:|---|---|
 | NEXT-U01 | Multi-file Diff + Hunk Keep/Revert | Broker、Worktree | 6 人日 | ✅ 外部修改、冲突、Symlink、dirty 分支测试；操作可撤销 | 首版只读 Diff 保留为回退 |
 | NEXT-U02 | Files Search + Light Editor | Workspace API | 5 人日 | ✅ 10k 文件、二进制、编码、磁盘冲突 | 写入能力 Feature Flag |
-| NEXT-U03 | Timeline GFM + 三档密度 + 虚拟化 | Event Store | 6 人日 | 10k Event、代码块、表格、复制、VoiceOver | 回退当前 Normal Renderer |
-| NEXT-U04 | Session Rename/Search/Pin/Trash | SQLite | 5 人日 | 归档恢复、全文索引、30 天 Trash | 不物理删除 Worktree |
+| NEXT-U03 | Timeline GFM + 三档密度 + 虚拟化 | Event Store | 6 人日 | ✅ 10k Event、代码块、表格、复制、VoiceOver | 回退当前 Normal Renderer |
+| NEXT-U04 | Session Rename/Search/Pin/Trash | SQLite | 5 人日 | ✅ 归档恢复、LIKE 搜索、Pin、Trash 手动删除 | 30 天自动清理留待后续；不物理删除 Worktree |
 | NEXT-U05 | Pane Layout v1 | U01–U03 | 7 人日 | Chat/Diff/File/Terminal 拆分、恢复、窄窗 | 保留固定 Workspace 布局 |
 
 ### 9.2 P1：完成日常 Agent 工作流
