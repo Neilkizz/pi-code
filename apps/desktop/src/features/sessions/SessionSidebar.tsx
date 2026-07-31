@@ -24,6 +24,45 @@ interface SessionSidebarProps {
   onOpenCommandPalette: () => void;
 }
 
+interface TaskGroup {
+  label: string;
+  tasks: PersistedTask[];
+}
+
+function clusterTasksByTime(tasks: PersistedTask[], t: (key: string) => string): TaskGroup[] {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86400000;
+  const startOfSevenDays = startOfToday - 6 * 86400000;
+
+  const today: PersistedTask[] = [];
+  const yesterday: PersistedTask[] = [];
+  const previousSevenDays: PersistedTask[] = [];
+  const older: PersistedTask[] = [];
+
+  for (const task of tasks) {
+    const timestamp = task.lastOpenedAt || task.updatedAt || 0;
+    if (timestamp >= startOfToday) {
+      today.push(task);
+    } else if (timestamp >= startOfYesterday) {
+      yesterday.push(task);
+    } else if (timestamp >= startOfSevenDays) {
+      previousSevenDays.push(task);
+    } else {
+      older.push(task);
+    }
+  }
+
+  const groups: TaskGroup[] = [
+    { label: t("Today"), tasks: today },
+    { label: t("Yesterday"), tasks: yesterday },
+    { label: t("Previous 7 Days"), tasks: previousSevenDays },
+    { label: t("Older"), tasks: older },
+  ];
+
+  return groups.filter((group) => group.tasks.length > 0);
+}
+
 export function SessionSidebar({
   activeView,
   activeTaskId,
@@ -41,6 +80,7 @@ export function SessionSidebar({
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
   const visibleTasks = filterTasks(tasks, query);
+  const taskGroups = clusterTasksByTime(visibleTasks, t);
 
   return (
     <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
@@ -96,7 +136,7 @@ export function SessionSidebar({
           <span className="nav-item__plus" aria-hidden="true">
             +
           </span>
-          <span>{t("New task")}</span>
+          <span>{t("New Chat")}</span>
         </button>
         <button
           className={`nav-item ${
@@ -116,14 +156,16 @@ export function SessionSidebar({
           <span>{t("Recents")}</span>
           <button
             type="button"
-            aria-label={t("New session")}
-            title={t("New session")}
+            aria-label={t("New Chat")}
+            title={t("New Chat")}
             onClick={onNewTask}
           >
             +
           </button>
         </div>
-        <label className="sr-only" htmlFor="recent-task-search">{t("Search tasks")}</label>
+        <label className="sr-only" htmlFor="recent-task-search">
+          {t("Search tasks")}
+        </label>
         <input
           id="recent-task-search"
           className="sidebar__task-search"
@@ -132,33 +174,38 @@ export function SessionSidebar({
           placeholder={t("Search tasks")}
         />
         <div className="session-list">
-          {visibleTasks.map((task) => {
-            const runtime = runtimeTasks.find(
-              (candidate) => candidate.id === task.id,
-            );
-            const active = activeView === "tasks" && activeTaskId === task.id;
-            return (
-              <button
-                className={`session-link ${
-                  active ? "session-link--active" : ""
-                }`}
-                type="button"
-                onClick={() => onSelectTask(task)}
-                aria-pressed={active}
-                key={task.id}
-              >
-                <span
-                  className={`session-link__dot session-link__dot--${
-                    runtime?.status ?? "saved"
-                  }`}
-                />
-                <span>
-                  <strong>{task.title}</strong>
-                  <small title={task.cwd}>{compactPath(task.cwd)}</small>
-                </span>
-              </button>
-            );
-          })}
+          {taskGroups.map((group) => (
+            <div className="session-group" key={group.label}>
+              <div className="session-group__label">{group.label}</div>
+              {group.tasks.map((task) => {
+                const runtime = runtimeTasks.find(
+                  (candidate) => candidate.id === task.id,
+                );
+                const active = activeView === "tasks" && activeTaskId === task.id;
+                return (
+                  <button
+                    className={`session-link ${
+                      active ? "session-link--active" : ""
+                    }`}
+                    type="button"
+                    onClick={() => onSelectTask(task)}
+                    aria-pressed={active}
+                    key={task.id}
+                  >
+                    <span
+                      className={`session-link__dot session-link__dot--${
+                        runtime?.status ?? "saved"
+                      }`}
+                    />
+                    <span>
+                      <strong>{task.title}</strong>
+                      <small title={task.cwd}>{compactPath(task.cwd)}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
           {tasks.length === 0 ? (
             <button
               className="session-link session-link--active"

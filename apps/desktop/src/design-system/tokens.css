@@ -8,14 +8,21 @@
     sans-serif;
   font-synthesis: none;
 
-  --canvas: #f7f5f0;
-  --sidebar: #f0eee8;
+  --bg-primary: #f7f5f0;
+  --bg-secondary: #f0eee8;
+  --bg-composer: #ffffff;
+  --border-color: #e4e0d7;
+  --text-primary: #292722;
+  --text-secondary: #706b62;
+
+  --canvas: var(--bg-primary);
+  --sidebar: var(--bg-secondary);
   --surface: #fcfbf8;
   --surface-raised: #ffffff;
   --surface-muted: #f2f0ea;
-  --line: #e4e0d7;
+  --line: var(--border-color);
   --line-strong: #cfc9bd;
-  --text: #292722;
+  --text: var(--text-primary);
   --text-secondary: #706b62;
   --text-tertiary: #969087;
   --accent: #b85e3c;
@@ -54,18 +61,31 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
+  --bg-primary: #f7f5f0;
+  --bg-secondary: #f0eee8;
+  --bg-composer: #ffffff;
+  --border-color: #e4e0d7;
+  --text-primary: #292722;
+  --text-secondary: #706b62;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #1f1f1d;
-  --sidebar: #282826;
+  --bg-primary: #1f1f1d;
+  --bg-secondary: #282826;
+  --bg-composer: #30302e;
+  --border-color: #3d3c38;
+  --text-primary: #eeeae2;
+  --text-secondary: #b7b1a7;
+
+  --canvas: var(--bg-primary);
+  --sidebar: var(--bg-secondary);
   --surface: #2b2b29;
   --surface-raised: #30302e;
   --surface-muted: #353432;
-  --line: #3d3c38;
+  --line: var(--border-color);
   --line-strong: #57534d;
-  --text: #eeeae2;
+  --text: var(--text-primary);
   --text-secondary: #b7b1a7;
   --text-tertiary: #878178;
   --accent: #d87955;
@@ -80,14 +100,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --canvas: #1f1f1d;
-    --sidebar: #282826;
+    --bg-primary: #1f1f1d;
+    --bg-secondary: #282826;
+    --bg-composer: #30302e;
+    --border-color: #3d3c38;
+    --text-primary: #eeeae2;
+    --text-secondary: #b7b1a7;
+
+    --canvas: var(--bg-primary);
+    --sidebar: var(--bg-secondary);
     --surface: #2b2b29;
     --surface-raised: #30302e;
     --surface-muted: #353432;
-    --line: #3d3c38;
+    --line: var(--border-color);
     --line-strong: #57534d;
-    --text: #eeeae2;
+    --text: var(--text-primary);
     --text-secondary: #b7b1a7;
     --text-tertiary: #878178;
     --accent: #d87955;
@@ -105,5 +132,15 @@
   :root {
     --line: color-mix(in srgb, currentColor 30%, transparent);
     --line-strong: color-mix(in srgb, currentColor 52%, transparent);
+    --border-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

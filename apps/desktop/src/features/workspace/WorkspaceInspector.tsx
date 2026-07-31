@@ -14,7 +14,7 @@ import {
 import { useI18n } from "../../i18n/I18nProvider";
 import type { ActivityItem } from "../sessions/types";
 
-type InspectorTab = "changes" | "files";
+type InspectorTab = "changes" | "files" | "steps" | "security";
 type Preview =
   | { kind: "diff"; value: WorkspaceDiff }
   | { kind: "file"; value: WorkspaceFileContent };
@@ -105,6 +105,16 @@ export function WorkspaceInspector({
     [normalizedFilter, snapshot?.changes],
   );
 
+  const toolActivities = useMemo(
+    () => activities.filter((act) => act.kind === "tool" || act.kind === "error" || act.kind === "system"),
+    [activities],
+  );
+
+  const securityLogs = useMemo(
+    () => activities.filter((act) => act.kind === "error" || act.title.toLowerCase().includes("permission") || act.title.toLowerCase().includes("approval") || act.title.toLowerCase().includes("denied")),
+    [activities],
+  );
+
   async function openDiff(relativePath?: string): Promise<void> {
     setLoading(true);
     try {
@@ -137,38 +147,6 @@ export function WorkspaceInspector({
 
   return (
     <aside className="workspace-inspector" aria-label={t("Project inspector")}>
-      <section className="workspace-inspector__progress">
-        <header>
-          <strong>{t("Progress")}</strong>
-          <span>{activities.length}</span>
-        </header>
-        <div>
-          {activities.length > 0 ? (
-            activities
-              .slice(0, 4)
-              .reverse()
-              .map((activity, index) => (
-                <article
-                  className={`workspace-progress workspace-progress--${activity.kind}`}
-                  key={activity.id}
-                  title={activity.detail}
-                >
-                  <span aria-hidden="true">
-                    {activity.kind === "error"
-                      ? "!"
-                      : index === Math.min(3, activities.length - 1)
-                        ? "•"
-                        : "✓"}
-                  </span>
-                  <strong>{activity.title}</strong>
-                </article>
-              ))
-          ) : (
-            <p>{t("Task activity will appear here.")}</p>
-          )}
-        </div>
-      </section>
-
       <header className="workspace-inspector__header">
         <div>
           <strong>{t("Project")}</strong>
@@ -196,7 +174,7 @@ export function WorkspaceInspector({
           aria-selected={tab === "changes"}
           onClick={() => setTab("changes")}
         >
-          {t("Changes")}
+          {t("Diff Viewer")}
           <span>{snapshot?.changes.length ?? 0}</span>
         </button>
         <button
@@ -209,17 +187,39 @@ export function WorkspaceInspector({
           {t("Files")}
           <span>{snapshot?.files.length ?? 0}</span>
         </button>
+        <button
+          className={tab === "steps" ? "is-active" : ""}
+          type="button"
+          role="tab"
+          aria-selected={tab === "steps"}
+          onClick={() => setTab("steps")}
+        >
+          {t("Agent Steps")}
+          <span>{toolActivities.length}</span>
+        </button>
+        <button
+          className={tab === "security" ? "is-active" : ""}
+          type="button"
+          role="tab"
+          aria-selected={tab === "security"}
+          onClick={() => setTab("security")}
+        >
+          {t("Security Audit")}
+          <span>{securityLogs.length}</span>
+        </button>
       </div>
 
       <div className="workspace-inspector__browser">
-        <label className="workspace-search">
-          <span className="sr-only">{t("Filter project paths")}</span>
-          <input
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder={t("Filter paths")}
-          />
-        </label>
+        {tab === "changes" || tab === "files" ? (
+          <label className="workspace-search">
+            <span className="sr-only">{t("Filter project paths")}</span>
+            <input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder={t("Filter paths")}
+            />
+          </label>
+        ) : null}
 
         <div className="workspace-path-list">
           {tab === "changes" ? (
@@ -266,7 +266,7 @@ export function WorkspaceInspector({
                 </div>
               ) : null}
             </>
-          ) : (
+          ) : tab === "files" ? (
             <>
               {files.slice(0, 1_000).map((file) => (
                 <button
@@ -289,12 +289,46 @@ export function WorkspaceInspector({
                 </div>
               ) : null}
             </>
+          ) : tab === "steps" ? (
+            <div className="inspector-activity-list">
+              {toolActivities.map((act) => (
+                <div className={`activity-step activity-step--${act.kind}`} key={act.id}>
+                  <div className="activity-step__header">
+                    <strong>{act.title}</strong>
+                    <span className="activity-step__status">{act.status ?? act.kind}</span>
+                  </div>
+                  {act.detail ? <p className="activity-step__detail">{act.detail}</p> : null}
+                  {act.input ? <pre className="activity-step__code">{act.input}</pre> : null}
+                </div>
+              ))}
+              {toolActivities.length === 0 ? (
+                <p className="workspace-path-list__empty">{t("No step activity yet.")}</p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="inspector-activity-list">
+              {securityLogs.map((log) => (
+                <div className={`security-log security-log--${log.kind}`} key={log.id}>
+                  <div className="security-log__header">
+                    <span className="security-log__badge">AUDIT</span>
+                    <strong>{log.title}</strong>
+                  </div>
+                  {log.detail ? <p className="security-log__detail">{log.detail}</p> : null}
+                </div>
+              ))}
+              {securityLogs.length === 0 ? (
+                <div className="workspace-path-list__empty">
+                  <strong>{t("Security clean")}</strong>
+                  <span>{t("No security alerts or denied permission requests.")}</span>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       </div>
 
       <section className="workspace-preview">
-        {preview ? (
+        {tab === "steps" || tab === "security" ? null : preview ? (
           <>
             <header>
               <div>
