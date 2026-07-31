@@ -104,8 +104,8 @@ impl TaskRepository {
 
     pub fn rename(database_path: &Path, id: &str, title: &str) -> Result<TaskRecord, String> {
         let connection = Database::open(database_path.to_path_buf())?.connection()?;
-        let task = get_with_connection(&connection, id)?
-            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        let task =
+            get_with_connection(&connection, id)?.ok_or_else(|| format!("Unknown task: {id}"))?;
         if task.archived {
             return Err("Cannot rename an archived task".into());
         }
@@ -122,8 +122,8 @@ impl TaskRepository {
 
     pub fn pin(database_path: &Path, id: &str, pinned: bool) -> Result<TaskRecord, String> {
         let connection = Database::open(database_path.to_path_buf())?.connection()?;
-        let task = get_with_connection(&connection, id)?
-            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        let task =
+            get_with_connection(&connection, id)?.ok_or_else(|| format!("Unknown task: {id}"))?;
         if task.archived {
             return Err("Cannot pin an archived task".into());
         }
@@ -159,8 +159,8 @@ impl TaskRepository {
 
     pub fn delete(database_path: &Path, id: &str) -> Result<(), String> {
         let connection = Database::open(database_path.to_path_buf())?.connection()?;
-        let task = get_with_connection(&connection, id)?
-            .ok_or_else(|| format!("Unknown task: {id}"))?;
+        let task =
+            get_with_connection(&connection, id)?.ok_or_else(|| format!("Unknown task: {id}"))?;
         if !task.archived {
             return Err("Cannot delete an active task; only archived tasks can be deleted".into());
         }
@@ -488,8 +488,7 @@ mod tests {
             },
         )
         .unwrap();
-        let renamed =
-            TaskRepository::rename(&paths.database_file, &task.id, "New title").unwrap();
+        let renamed = TaskRepository::rename(&paths.database_file, &task.id, "New title").unwrap();
         assert_eq!(renamed.title, "New title");
         assert!(renamed.updated_at >= task.updated_at);
         fs::remove_dir_all(paths.root).unwrap();

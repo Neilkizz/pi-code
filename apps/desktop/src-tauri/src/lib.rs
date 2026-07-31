@@ -455,6 +455,39 @@ fn task_archive(
 }
 
 #[tauri::command]
+fn task_rename(app: tauri::AppHandle, id: String, title: String) -> Result<TaskRecord, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    Database::initialize(&paths)?;
+    TaskRepository::rename(&paths.database_file, &id, &title)
+}
+
+#[tauri::command]
+fn task_pin(app: tauri::AppHandle, id: String, pinned: bool) -> Result<TaskRecord, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    Database::initialize(&paths)?;
+    TaskRepository::pin(&paths.database_file, &id, pinned)
+}
+
+#[tauri::command]
+fn task_search(app: tauri::AppHandle, query: String) -> Result<Vec<TaskRecord>, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    Database::initialize(&paths)?;
+    TaskRepository::search(&paths.database_file, &query)
+}
+
+#[tauri::command]
+fn task_delete(
+    app: tauri::AppHandle,
+    terminal: tauri::State<'_, TerminalManager>,
+    id: String,
+) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    Database::initialize(&paths)?;
+    terminal.stop(&id)?;
+    TaskRepository::delete(&paths.database_file, &id)
+}
+
+#[tauri::command]
 fn terminal_start(
     app: tauri::AppHandle,
     terminal: tauri::State<'_, TerminalManager>,
@@ -877,6 +910,10 @@ pub fn run() {
             task_save,
             task_touch,
             task_archive,
+            task_rename,
+            task_pin,
+            task_search,
+            task_delete,
             task_event_replay,
             attachment_list,
             attachment_pick,
