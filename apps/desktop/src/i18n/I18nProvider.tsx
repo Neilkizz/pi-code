@@ -251,6 +251,16 @@ const zhCN: Record<string, string> = {
   "File preview": "文件预览",
   "Large file truncated; preview limit is 1 MiB / 5,000 lines.":
     "大文件已截断；预览上限为 1 MiB / 5,000 行。",
+  "Binary content is not rendered as text.":
+    "二进制内容不会以文本形式渲染。",
+  "Edit file": "编辑文件",
+  Saved: "已保存",
+  "Unsaved changes": "有未保存的更改",
+  "No matching files": "未找到匹配的文件",
+  "Try a different name or path fragment.":
+    "换一个文件名或路径片段试试。",
+  "Too many matches — narrow the search.":
+    "匹配项过多——请缩小搜索范围。",
   "User terminal": "用户终端",
   "User PTY · separate from Agent tools": "用户 PTY · 与智能体工具隔离",
   Restart: "重启",

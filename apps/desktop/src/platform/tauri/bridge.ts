@@ -32,10 +32,12 @@ import type {
   UpdatePreferences,
   WorkspaceDiff,
   WorkspaceFileContent,
+  WorkspaceFileSearch,
   WorkspaceHunkOperation,
   WorkspaceHunkRef,
   WorkspacePatchResult,
   WorkspaceSnapshot,
+  WorkspaceWriteResult,
   WorktreeInfo,
 } from "@pi-desktop/protocol";
 
@@ -245,6 +247,30 @@ export async function applyWorkspacePatch(
     oldLines: hunk?.oldLines,
     newStart: hunk?.newStart,
     newLines: hunk?.newLines,
+  });
+}
+
+export async function writeWorkspaceFile(
+  taskId: string,
+  relativePath: string,
+  content: string,
+  baseHash: string,
+): Promise<WorkspaceWriteResult> {
+  return invoke<WorkspaceWriteResult>("workspace_file_write", {
+    taskId,
+    relativePath,
+    content,
+    baseHash,
+  });
+}
+
+export async function searchWorkspaceFiles(
+  taskId: string,
+  query: string,
+): Promise<WorkspaceFileSearch> {
+  return invoke<WorkspaceFileSearch>("workspace_file_search", {
+    taskId,
+    query,
   });
 }
 

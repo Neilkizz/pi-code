@@ -178,8 +178,8 @@ Pi Desktop.app
 | 自动模型发现 | 完成 | OpenAI/Ollama 常见 `/models` 形态、去重 | Anthropic 深度探测、流式/Tool/Vision 测试 |
 | Permission Mode | 完成 | Ask、Accept Edits、Plan、Auto fail-closed | 强隔离后开放真正 Auto |
 | Capability Broker | 完成 | 路径、Symlink、文件、Shell、Token、撤销 | Network 域名策略 UI、审计检索 |
-| Workspace Files | 部分 | 变更列表、受限文件查看 | 搜索、轻量编辑、二进制预览 |
-| Diff | 部分 | Workspace Diff 查看 | Hunk Keep/Revert、评论、Stage、冲突 |
+| Workspace Files | 完成 | 变更列表、全树搜索、轻量编辑器、二进制十六进制 Hex 预览 | 已支持全树搜索防抖、文件轻量编辑保存、二进制 Hex 格式化预览 |
+| Diff | 完成 | Workspace Diff 查看、Hunk Keep/Revert | Hunk-level Revert/Keep、撤销、未跟踪文件管理、冲突拦截 |
 | User Terminal | 完成 | 真 PTY、输入、Resize、停止、cwd | 多 Tab、历史和命令链接 |
 | Command Palette | 完成 | `Cmd+K`、导航、重启、快捷键 | 全命令注册表与用户改键 |
 | 统一 Settings | 部分 | 单一入口、模态窗口、搜索、Escape/关闭、`Cmd+,`、General、Models & API、Extensions & Updates、Runtime | Project Override、隐私/通知/快捷入口等高级分类 |
@@ -558,8 +558,8 @@ npm run desktop:dmg
 
 | ID | 工作 | 依赖 | 估算 | 验收 | 风险与回滚 |
 |---|---|---|---:|---|---|
-| NEXT-U01 | Multi-file Diff + Hunk Keep/Revert | Broker、Worktree | 6 人日 | 外部修改、冲突、Symlink、dirty 分支测试；操作可撤销 | 首版只读 Diff 保留为回退 |
-| NEXT-U02 | Files Search + Light Editor | Workspace API | 5 人日 | 10k 文件、二进制、编码、磁盘冲突 | 写入能力 Feature Flag |
+| NEXT-U01 | Multi-file Diff + Hunk Keep/Revert | Broker、Worktree | 6 人日 | ✅ 外部修改、冲突、Symlink、dirty 分支测试；操作可撤销 | 首版只读 Diff 保留为回退 |
+| NEXT-U02 | Files Search + Light Editor | Workspace API | 5 人日 | ✅ 10k 文件、二进制、编码、磁盘冲突 | 写入能力 Feature Flag |
 | NEXT-U03 | Timeline GFM + 三档密度 + 虚拟化 | Event Store | 6 人日 | 10k Event、代码块、表格、复制、VoiceOver | 回退当前 Normal Renderer |
 | NEXT-U04 | Session Rename/Search/Pin/Trash | SQLite | 5 人日 | 归档恢复、全文索引、30 天 Trash | 不物理删除 Worktree |
 | NEXT-U05 | Pane Layout v1 | U01–U03 | 7 人日 | Chat/Diff/File/Terminal 拆分、恢复、窄窗 | 保留固定 Workspace 布局 |

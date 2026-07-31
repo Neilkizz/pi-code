@@ -33,7 +33,10 @@ use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 use terminal::{TerminalLaunch, TerminalManager};
 use updates::{AutomaticUpdateReport, PiAgentUpdateStatus, UpdatePreferences};
-use workspace::{WorkspaceDiff, WorkspaceFileContent, WorkspacePatchResult, WorkspaceSnapshot};
+use workspace::{
+    WorkspaceDiff, WorkspaceFileContent, WorkspaceFileSearch, WorkspacePatchResult,
+    WorkspaceSnapshot, WorkspaceWriteResult,
+};
 
 #[tauri::command]
 fn desktop_bootstrap(app: tauri::AppHandle) -> Result<DesktopBootstrap, String> {
@@ -154,6 +157,34 @@ fn workspace_file_read(
 ) -> Result<WorkspaceFileContent, String> {
     let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
     workspace::read_file(&paths.database_file, &task_id, &relative_path)
+}
+
+#[tauri::command]
+fn workspace_file_write(
+    app: tauri::AppHandle,
+    task_id: String,
+    relative_path: String,
+    content: String,
+    base_hash: Option<String>,
+) -> Result<WorkspaceWriteResult, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    workspace::write_file(
+        &paths,
+        &task_id,
+        &relative_path,
+        &content,
+        base_hash.as_deref(),
+    )
+}
+
+#[tauri::command]
+fn workspace_file_search(
+    app: tauri::AppHandle,
+    task_id: String,
+    query: String,
+) -> Result<WorkspaceFileSearch, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    workspace::search_files(&paths.database_file, &task_id, &query)
 }
 
 #[tauri::command]
@@ -856,6 +887,8 @@ pub fn run() {
             terminal_stop,
             workspace_snapshot,
             workspace_file_read,
+            workspace_file_write,
+            workspace_file_search,
             workspace_diff_read,
             workspace_diff_apply,
             git_repository_inspect,

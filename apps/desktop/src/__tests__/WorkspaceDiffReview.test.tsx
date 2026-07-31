@@ -14,11 +14,13 @@ const {
   readWorkspaceDiff,
   readWorkspaceFile,
   applyWorkspacePatch,
+  searchWorkspaceFiles,
 } = vi.hoisted(() => ({
   getWorkspaceSnapshot: vi.fn(),
   readWorkspaceDiff: vi.fn(),
   readWorkspaceFile: vi.fn(),
   applyWorkspacePatch: vi.fn(),
+  searchWorkspaceFiles: vi.fn(),
 }));
 
 vi.mock("../platform/tauri/bridge", () => ({
@@ -26,6 +28,7 @@ vi.mock("../platform/tauri/bridge", () => ({
   readWorkspaceDiff,
   readWorkspaceFile,
   applyWorkspacePatch,
+  searchWorkspaceFiles,
 }));
 
 const task: PersistedTask = {
@@ -87,6 +90,7 @@ describe("WorkspaceInspector diff review", () => {
       size: 0,
       binary: false,
       truncated: false,
+      hash: "abc123",
     });
     applyWorkspacePatch.mockResolvedValue({
       ok: true,
@@ -141,6 +145,7 @@ describe("WorkspaceInspector diff review", () => {
       size: 0,
       binary: false,
       truncated: false,
+      hash: "abc123",
     });
 
     renderInspector();

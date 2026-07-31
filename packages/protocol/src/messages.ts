@@ -237,6 +237,10 @@ export interface WorkspaceFileContent {
   size: number;
   binary: boolean;
   truncated: boolean;
+  /** Lowercase sha256 hex of the file bytes — the editor's save-time stale guard. */
+  hash: string;
+  /** Hex of the first 128 bytes, present only for binary files (hex preview). */
+  binaryPreview?: string;
 }
 
 export interface WorkspaceDiff {
@@ -267,6 +271,23 @@ export interface WorkspacePatchResult {
   /** Number of hunks applied (1 for a single hunk, all for a whole-file op). */
   appliedHunks: number;
   message?: string;
+}
+
+/** Result of a user-initiated light-editor save. */
+export interface WorkspaceWriteResult {
+  ok: boolean;
+  path: string;
+  bytesWritten: number;
+  /** sha256 hex of the newly written content — pass back on the next save. */
+  hash: string;
+}
+
+/** Bounded results of a full-tree workspace file-name search. */
+export interface WorkspaceFileSearch {
+  taskId: string;
+  query: string;
+  files: WorkspaceFileEntry[];
+  truncated: boolean;
 }
 
 export interface TerminalLaunch {

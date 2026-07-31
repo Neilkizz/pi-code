@@ -4,6 +4,7 @@ import type {
   PersistedTask,
   WorkspaceDiff,
   WorkspaceFileContent,
+  WorkspaceFileEntry,
   WorkspaceHunkOperation,
   WorkspaceSnapshot,
 } from "@pi-desktop/protocol";
@@ -12,10 +13,13 @@ import {
   getWorkspaceSnapshot,
   readWorkspaceDiff,
   readWorkspaceFile,
+  searchWorkspaceFiles,
 } from "../../platform/tauri/bridge";
 import { useI18n } from "../../i18n/I18nProvider";
+import { isFeatureEnabled } from "../flags";
 import type { ActivityItem } from "../sessions/types";
 import { parseUnifiedDiff, type ParsedDiffHunk } from "./parseUnifiedDiff";
+import { FileEditor } from "./FileEditor";
 
 type InspectorTab = "changes" | "files" | "steps" | "security";
 type Preview =
@@ -51,6 +55,12 @@ export function WorkspaceInspector({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  // Full-tree search results (server-side). `null` = not searching (local list).
+  const [searchResults, setSearchResults] = useState<WorkspaceFileEntry[] | null>(
+    null,
+  );
+  const [searching, setSearching] = useState(false);
+  const [searchTruncated, setSearchTruncated] = useState(false);
   const requestSequence = useRef(0);
 
   // Hunks the user reverted this session (keyed by path), so each can be re-kept.
@@ -83,9 +93,41 @@ export function WorkspaceInspector({
     setSnapshot(null);
     setPreview(null);
     setFilter("");
+    setSearchResults(null);
     setRevertedByPath({});
     void refresh();
   }, [refresh, task.id]);
+
+  // Debounced full-tree search: only when the Files tab has a filter.
+  useEffect(() => {
+    const query = filter.trim();
+    if (tab !== "files" || !query) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await searchWorkspaceFiles(task.id, query);
+          if (!cancelled) {
+            setSearchResults(result.files);
+            setSearchTruncated(result.truncated);
+          }
+        } catch (cause: unknown) {
+          if (!cancelled) onError(errorMessage(cause));
+        } finally {
+          if (!cancelled) setSearching(false);
+        }
+      })();
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [filter, tab, task.id, onError]);
 
   useEffect(() => {
     if (runtimeStatus !== "running" && runtimeStatus !== "waiting") {
@@ -166,6 +208,14 @@ export function WorkspaceInspector({
       onError(errorMessage(cause));
     } finally {
       setLoading(false);
+    }
+  }
+
+  // After a light-editor save: re-read the file (fresh hash) and refresh the tree.
+  async function handleFileSaved(): Promise<void> {
+    if (preview?.kind === "file") {
+      await openFile(preview.value.path);
+      await refresh();
     }
   }
 
@@ -353,28 +403,57 @@ export function WorkspaceInspector({
               ) : null}
             </>
           ) : tab === "files" ? (
-            <>
-              {files.slice(0, 1_000).map((file) => (
-                <button
-                  className={activePath === file.path ? "is-active" : ""}
-                  type="button"
-                  onClick={() => void openFile(file.path)}
-                  key={file.path}
-                  title={file.path}
-                >
-                  <span className="file-glyph">·</span>
-                  <span>{file.path}</span>
-                  <small>{formatBytes(file.size)}</small>
-                </button>
-              ))}
-              {snapshot?.filesTruncated || files.length > 1_000 ? (
-                <div className="workspace-path-list__notice">
-                  {t(
-                    "The list is limited; use the filter above to narrow it down.",
-                  )}
-                </div>
-              ) : null}
-            </>
+            searchResults !== null ? (
+              <>
+                {searchResults.map((file) => (
+                  <button
+                    className={activePath === file.path ? "is-active" : ""}
+                    type="button"
+                    onClick={() => void openFile(file.path)}
+                    key={file.path}
+                    title={file.path}
+                  >
+                    <span className="file-glyph">·</span>
+                    <span>{file.path}</span>
+                    <small>{formatBytes(file.size)}</small>
+                  </button>
+                ))}
+                {!searching && searchResults.length === 0 ? (
+                  <div className="workspace-path-list__empty">
+                    <strong>{t("No matching files")}</strong>
+                    <span>{t("Try a different name or path fragment.")}</span>
+                  </div>
+                ) : null}
+                {searchTruncated ? (
+                  <div className="workspace-path-list__notice">
+                    {t("Too many matches — narrow the search.")}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {files.slice(0, 1_000).map((file) => (
+                  <button
+                    className={activePath === file.path ? "is-active" : ""}
+                    type="button"
+                    onClick={() => void openFile(file.path)}
+                    key={file.path}
+                    title={file.path}
+                  >
+                    <span className="file-glyph">·</span>
+                    <span>{file.path}</span>
+                    <small>{formatBytes(file.size)}</small>
+                  </button>
+                ))}
+                {snapshot?.filesTruncated || files.length > 1_000 ? (
+                  <div className="workspace-path-list__notice">
+                    {t(
+                      "The list is limited; use the filter above to narrow it down.",
+                    )}
+                  </div>
+                ) : null}
+              </>
+            )
           ) : tab === "steps" ? (
             <div className="inspector-activity-list">
               {toolActivities.map((act) => (
@@ -473,7 +552,12 @@ export function WorkspaceInspector({
                 }
               />
             ) : (
-              <FileContent file={preview.value} />
+              <FileContent
+                file={preview.value}
+                taskId={task.id}
+                onSaved={() => void handleFileSaved()}
+                onError={onError}
+              />
             )}
           </>
         ) : (
@@ -699,18 +783,37 @@ function lineClass(prefix: "+" | "-" | " "): "added" | "deleted" | "context" {
   return "context";
 }
 
-function FileContent({ file }: { file: WorkspaceFileContent }) {
+interface FileContentProps {
+  file: WorkspaceFileContent;
+  taskId: string;
+  onSaved: () => void;
+  onError: (message: string) => void;
+}
+
+function FileContent({ file, taskId, onSaved, onError }: FileContentProps) {
   const { t } = useI18n();
   if (file.binary) {
     return (
-      <div className="workspace-preview__empty workspace-preview__empty--compact">
-        <strong>{t("Binary file")}</strong>
-        <p>
-          {t(
-            "Only metadata is shown; binary content is not rendered as text.",
-          )}
+      <div className="binary-preview">
+        <p className="binary-preview__meta">
+          <strong>{t("Binary file")}</strong>
+          <span>{formatBytes(file.size)}</span>
         </p>
+        {file.binaryPreview ? (
+          <pre className="binary-preview__hex">
+            {formatHex(file.binaryPreview)}
+          </pre>
+        ) : (
+          <p className="workspace-preview__empty workspace-preview__empty--compact">
+            {t("Binary content is not rendered as text.")}
+          </p>
+        )}
       </div>
+    );
+  }
+  if (!file.truncated && isFeatureEnabled("files.lightEditor")) {
+    return (
+      <FileEditor file={file} taskId={taskId} onSaved={onSaved} onError={onError} />
     );
   }
   const allLines = file.content.split("\n");
@@ -730,6 +833,25 @@ function FileContent({ file }: { file: WorkspaceFileContent }) {
       ) : null}
     </div>
   );
+}
+
+function formatHex(hex: string): string {
+  const rows: string[] = [];
+  for (let offset = 0; offset < hex.length; offset += 32) {
+    const chunk = hex.slice(offset, offset + 32);
+    const bytes = chunk.match(/.{2}/g) ?? [];
+    const ascii = bytes
+      .map((pair) => {
+        const code = Number.parseInt(pair, 16);
+        return code >= 32 && code < 127 ? String.fromCharCode(code) : ".";
+      })
+      .join("");
+    const address = (offset / 2).toString(16).padStart(6, "0");
+    rows.push(
+      `${address}  ${bytes.join(" ").padEnd(47)}  ${ascii}`,
+    );
+  }
+  return rows.join("\n");
 }
 
 function formatBytes(bytes: number): string {

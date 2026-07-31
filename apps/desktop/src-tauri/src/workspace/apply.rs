@@ -384,7 +384,7 @@ fn change_status(root: &Path, relative: &str) -> Result<Option<String>, String> 
         .map(|change| change.status))
 }
 
-fn verify_regular_file(root: &Path, relative: &str) -> Result<(), String> {
+pub(super) fn verify_regular_file(root: &Path, relative: &str) -> Result<(), String> {
     let path = root.join(relative);
     // Inspect the un-resolved path so a symlink at `relative` is rejected even when
     // it points inside the task root.
