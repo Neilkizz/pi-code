@@ -11,6 +11,11 @@ import {
   type AppTheme,
   useI18n,
 } from "../../i18n/I18nProvider";
+import {
+  readTimelineDensity,
+  writeTimelineDensity,
+  type TimelineDensity,
+} from "../flags";
 import { EndpointCenter } from "../endpoints/EndpointCenter";
 import { ExtensionCenter } from "../extensions/ExtensionCenter";
 
@@ -138,6 +143,14 @@ export function SettingsCenter({
 
 function GeneralSettings() {
   const { locale, setLocale, setTheme, t, theme } = useI18n();
+  const [density, setDensity] = useState<TimelineDensity>(() =>
+    readTimelineDensity()
+  );
+
+  const handleDensityChange = (nextDensity: TimelineDensity) => {
+    setDensity(nextDensity);
+    writeTimelineDensity(nextDensity);
+  };
 
   return (
     <>
@@ -186,6 +199,26 @@ function GeneralSettings() {
             <option value="system">{t("Follow system")}</option>
             <option value="light">{t("Light")}</option>
             <option value="dark">{t("Dark")}</option>
+          </select>
+        </section>
+
+        <section className="panel preference-card">
+          <div>
+            <strong>{t("Timeline Density")}</strong>
+            <span>
+              {t("Timeline spacing and message padding.")}
+            </span>
+          </div>
+          <select
+            value={density}
+            onChange={(event) =>
+              handleDensityChange(event.target.value as TimelineDensity)
+            }
+            aria-label={t("Timeline Density")}
+          >
+            <option value="comfortable">{t("Comfortable")}</option>
+            <option value="compact">{t("Compact")}</option>
+            <option value="spaced">{t("Spaced")}</option>
           </select>
         </section>
 

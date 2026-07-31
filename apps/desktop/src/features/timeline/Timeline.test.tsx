@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n/I18nProvider";
 import type { TaskViewState } from "../sessions/types";
+import { writeTimelineDensity } from "../flags";
 import { Timeline } from "./Timeline";
 
 const scrollTo = vi.fn();
@@ -50,6 +51,14 @@ describe("Timeline", () => {
       return 1;
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
       value: scrollTo,
@@ -162,6 +171,81 @@ describe("Timeline", () => {
 
     expect(screen.getByText(/Pi stopped before responding|Pi 在回复前已停止/)).toBeTruthy();
     expect(screen.getByText("No API key found for the selected model.")).toBeTruthy();
+  });
+
+  it("applies the default comfortable density class", () => {
+    renderTimeline();
+    const transcript = document.querySelector(".transcript");
+    expect(transcript?.classList.contains("transcript--density-comfortable")).toBe(true);
+  });
+
+  it("applies a persisted density class from localStorage", () => {
+    window.localStorage.setItem("pi-desktop.timelineDensity", "compact");
+    renderTimeline();
+    const transcript = document.querySelector(".transcript");
+    expect(transcript?.classList.contains("transcript--density-compact")).toBe(true);
+  });
+
+  it("reacts to a density change written from settings", async () => {
+    renderTimeline();
+    const transcript = document.querySelector(".transcript");
+    expect(transcript?.classList.contains("transcript--density-comfortable")).toBe(true);
+
+    writeTimelineDensity("spaced");
+    await waitFor(() => {
+      expect(transcript?.classList.contains("transcript--density-spaced")).toBe(true);
+    });
+  });
+
+  it("renders only the visible slice of the conversation when virtualized", async () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({
+      id: `m-${i}`,
+      role: (i % 2 ? "assistant" : "user") as "assistant" | "user",
+      text: `Message ${i}`,
+    }));
+    const view = renderTimeline({ ...baseView, messages: many });
+    const conversation = view.container.querySelector<HTMLElement>(".conversation")!;
+    defineScrollMetrics(conversation, { scrollTop: 0, clientHeight: 600, scrollHeight: 30000 });
+    fireEvent.scroll(conversation);
+
+    await waitFor(() => {
+      expect(conversation.querySelectorAll(".message").length).toBeLessThan(30);
+      expect(conversation.querySelectorAll(".timeline-spacer").length).toBeGreaterThan(0);
+    });
+  });
+
+  it("keeps the DOM bounded for a 10,000-message conversation", async () => {
+    const huge = Array.from({ length: 10000 }, (_, i) => ({
+      id: `h-${i}`,
+      role: (i % 2 ? "assistant" : "user") as "assistant" | "user",
+      text: `Long message number ${i}`,
+    }));
+    const view = renderTimeline({ ...baseView, messages: huge });
+    const conversation = view.container.querySelector<HTMLElement>(".conversation")!;
+    defineScrollMetrics(conversation, { scrollTop: 500000, clientHeight: 600, scrollHeight: 1200000 });
+    fireEvent.scroll(conversation);
+
+    await waitFor(() => {
+      expect(conversation.querySelectorAll(".message").length).toBeLessThan(30);
+    });
+  });
+
+  it("falls back to the static renderer when virtualization is disabled", async () => {
+    window.localStorage.setItem("pi-desktop.flag.timeline.virtualization", "0");
+    const many = Array.from({ length: 50 }, (_, i) => ({
+      id: `m-${i}`,
+      role: (i % 2 ? "assistant" : "user") as "assistant" | "user",
+      text: `Message ${i}`,
+    }));
+    const view = renderTimeline({ ...baseView, messages: many });
+    const conversation = view.container.querySelector<HTMLElement>(".conversation")!;
+    defineScrollMetrics(conversation, { scrollTop: 0, clientHeight: 600, scrollHeight: 10000 });
+    fireEvent.scroll(conversation);
+
+    await waitFor(() => {
+      expect(conversation.querySelectorAll(".message").length).toBe(50);
+      expect(conversation.querySelectorAll(".timeline-spacer").length).toBe(0);
+    });
   });
 });
 

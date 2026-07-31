@@ -1,10 +1,13 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavIcon } from "../../design-system/NavIcon";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { ActivityItem, TaskViewState } from "../sessions/types";
+import type { TaskTranscriptMessage } from "@pi-desktop/protocol";
+import { isFeatureEnabled, readTimelineDensity, TIMELINE_DENSITY_EVENT, type TimelineDensity } from "../flags";
 import { ToolEventCard } from "./ToolEventCard";
+import { useVirtualFeed } from "./useVirtualFeed";
 
 interface TimelineProps {
   hasTask: boolean;
@@ -25,10 +28,37 @@ export function Timeline({
 }: TimelineProps) {
   const { t } = useI18n();
   const endRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
   const followLatest = useRef(true);
   const scheduledScroll = useRef<number | null>(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [density, setDensity] = useState<TimelineDensity>(() => readTimelineDensity());
+  const enableVirtual = isFeatureEnabled("timeline.virtualization");
   const lastMessage = taskView.messages.at(-1);
+
+  useEffect(() => {
+    const handleDensityChange = (event: Event) => {
+      setDensity((event as CustomEvent<TimelineDensity>).detail);
+    };
+    window.addEventListener(TIMELINE_DENSITY_EVENT, handleDensityChange);
+    return () => window.removeEventListener(TIMELINE_DENSITY_EVENT, handleDensityChange);
+  }, []);
+
+  const getItemKey = useCallback((msg: TaskTranscriptMessage) => msg.id, []);
+
+  // Resolve the conversation scroll container in the layout phase, BEFORE
+  // useVirtualFeed's own layout effect runs, so its scroll listener actually binds.
+  useLayoutEffect(() => {
+    containerRef.current = endRef.current?.closest<HTMLElement>(".conversation") ?? null;
+  });
+
+  const { virtualItems, topSpacerHeight, bottomSpacerHeight } = useVirtualFeed({
+    items: taskView.messages,
+    getItemKey,
+    estimatedHeight: 120,
+    overscan: 5,
+    containerRef,
+  });
 
   function scrollToLatest(behavior: ScrollBehavior = "auto"): void {
     const container = endRef.current?.closest<HTMLElement>(".conversation");
@@ -104,87 +134,114 @@ export function Timeline({
     );
   }
 
+  function renderMessage(message: TaskTranscriptMessage, measureRef?: (node: HTMLElement | null) => void) {
+    return (
+      <article
+        className={`message message--${message.role}`}
+        key={message.id}
+        ref={measureRef}
+      >
+        <h2 className="sr-only">
+          {message.role === "assistant" ? "Pi" : t("You")}
+        </h2>
+        <div className="message__body">
+          <div className="message__meta" aria-hidden="true">
+            {message.id === taskView.streamingAssistantId && taskError
+              ? t("Runtime error")
+              : message.role === "assistant"
+                ? "Pi"
+                : t("You")}
+            {message.id === taskView.streamingAssistantId && taskRunning
+              ? ` · ${t("Working…")}`
+              : ""}
+            {message.createdAt
+              ? ` · ${formatActivityTime(message.createdAt)}`
+              : ""}
+          </div>
+          {message.text ? (
+            <div className="message__markdown">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    if (!inline && (match || String(children).includes("\n"))) {
+                      return (
+                        <CodeBlock className={className}>
+                          {children}
+                        </CodeBlock>
+                      );
+                    }
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {message.text}
+              </ReactMarkdown>
+            </div>
+          ) : message.id === taskView.streamingAssistantId && taskError ? (
+            <div className="message__runtime-error" role="alert">
+              <strong>{t("Pi stopped before responding")}</strong>
+              <p>{taskError}</p>
+            </div>
+          ) : (
+            <p>
+              {message.id === taskView.streamingAssistantId && taskRunning
+                ? t("Working…")
+                : ""}
+            </p>
+          )}
+          {message.text ? (
+            <div className="message__actions">
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(message.text)}
+                aria-label={t("Copy")}
+                title={t("Copy")}
+              >
+                ⧉
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
   return (
     <>
       <div
-        className="transcript"
+        className={`transcript transcript--density-${density}`}
         aria-live="polite"
         aria-label={t("Conversation")}
       >
-        {taskView.messages.map((message) => (
-          <article
-            className={`message message--${message.role}`}
-            key={message.id}
-          >
-            <h2 className="sr-only">
-              {message.role === "assistant" ? "Pi" : t("You")}
-            </h2>
-            <div className="message__body">
-              <div className="message__meta" aria-hidden="true">
-                {message.id === taskView.streamingAssistantId && taskError
-                  ? t("Runtime error")
-                  : message.role === "assistant"
-                    ? "Pi"
-                    : t("You")}
-                {message.id === taskView.streamingAssistantId && taskRunning
-                  ? ` · ${t("Working…")}`
-                  : ""}
-                {message.createdAt
-                  ? ` · ${formatActivityTime(message.createdAt)}`
-                  : ""}
-              </div>
-              {message.text ? (
-                <div className="message__markdown">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      code({ node, inline, className, children, ...props }: any) {
-                        const match = /language-(\w+)/.exec(className || "");
-                        if (!inline && (match || String(children).includes("\n"))) {
-                          return (
-                            <CodeBlock className={className}>
-                              {children}
-                            </CodeBlock>
-                          );
-                        }
-                        return (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                    }}
-                  >
-                    {message.text}
-                  </ReactMarkdown>
-                </div>
-              ) : message.id === taskView.streamingAssistantId && taskError ? (
-                <div className="message__runtime-error" role="alert">
-                  <strong>{t("Pi stopped before responding")}</strong>
-                  <p>{taskError}</p>
-                </div>
-              ) : (
-                <p>
-                  {message.id === taskView.streamingAssistantId && taskRunning
-                    ? t("Working…")
-                    : ""}
-                </p>
-              )}
-              {message.text ? (
-                <div className="message__actions">
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText(message.text)}
-                    aria-label={t("Copy")}
-                    title={t("Copy")}
-                  >
-                    ⧉
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </article>
-        ))}
+        {enableVirtual ? (
+          <>
+            {topSpacerHeight > 0 ? (
+              <div
+                className="timeline-spacer"
+                style={{ height: topSpacerHeight }}
+                aria-hidden="true"
+              />
+            ) : null}
+            {virtualItems.map(({ item, measureRef }) =>
+              renderMessage(item, measureRef)
+            )}
+            {bottomSpacerHeight > 0 ? (
+              <div
+                className="timeline-spacer"
+                style={{ height: bottomSpacerHeight }}
+                aria-hidden="true"
+              />
+            ) : null}
+          </>
+        ) : (
+          taskView.messages.map((message) => renderMessage(message))
+        )}
         {taskView.messages.length === 0 ? (
           <div className="conversation-ready">
             <span>

@@ -1,5 +1,6 @@
 const DEFAULT_FLAGS: Record<string, boolean> = {
   "files.lightEditor": true,
+  "timeline.virtualization": true,
 };
 
 /** Read a feature flag: an explicit localStorage override (`pi-desktop.flag.<name>`
@@ -26,4 +27,29 @@ export function setFeatureFlag(name: string, enabled: boolean | null): void {
   } catch {
     // ignore
   }
+}
+
+export type TimelineDensity = "compact" | "comfortable" | "spaced";
+
+export const TIMELINE_DENSITY_EVENT = "pi-desktop:timeline-density";
+
+export function readTimelineDensity(): TimelineDensity {
+  try {
+    const stored = window.localStorage.getItem("pi-desktop.timelineDensity");
+    if (stored === "compact" || stored === "comfortable" || stored === "spaced") {
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return "comfortable";
+}
+
+export function writeTimelineDensity(density: TimelineDensity): void {
+  try {
+    window.localStorage.setItem("pi-desktop.timelineDensity", density);
+  } catch {
+    // ignore
+  }
+  window.dispatchEvent(new CustomEvent(TIMELINE_DENSITY_EVENT, { detail: density }));
 }

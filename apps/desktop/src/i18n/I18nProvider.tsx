@@ -261,6 +261,11 @@ const zhCN: Record<string, string> = {
     "换一个文件名或路径片段试试。",
   "Too many matches — narrow the search.":
     "匹配项过多——请缩小搜索范围。",
+  "Timeline Density": "消息密度",
+  "Timeline spacing and message padding.": "调整对话时间线的消息间距与内边距。",
+  Comfortable: "适中",
+  Compact: "紧凑",
+  Spaced: "宽松",
   "User terminal": "用户终端",
   "User PTY · separate from Agent tools": "用户 PTY · 与智能体工具隔离",
   Restart: "重启",
