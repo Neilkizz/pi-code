@@ -148,15 +148,16 @@ fn persist_record(transaction: &Transaction<'_>, task: &TaskRecord) -> Result<()
     transaction
         .execute(
             "INSERT INTO tasks(
-                id, project_id, status, title, profile_json, archived,
+                id, project_id, status, title, profile_json, archived, pinned,
                 created_at, updated_at, last_opened_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
              ON CONFLICT(id) DO UPDATE SET
                 project_id = excluded.project_id,
                 status = excluded.status,
                 title = excluded.title,
                 profile_json = excluded.profile_json,
                 archived = excluded.archived,
+                pinned = excluded.pinned,
                 updated_at = excluded.updated_at,
                 last_opened_at = excluded.last_opened_at",
             params![
@@ -166,6 +167,7 @@ fn persist_record(transaction: &Transaction<'_>, task: &TaskRecord) -> Result<()
                 task.title,
                 profile_json,
                 i64::from(task.archived),
+                i64::from(task.pinned),
                 task.created_at as i64,
                 task.updated_at as i64,
                 task.last_opened_at as i64
@@ -216,12 +218,12 @@ fn task_select_sql(filter: &str) -> String {
     format!(
         "SELECT
             t.id, t.title, e.cwd, p.root, e.kind, e.worktree, e.branch, e.baseline,
-            t.profile_json, t.archived, t.created_at, t.updated_at, t.last_opened_at
+            t.profile_json, t.archived, t.pinned, t.created_at, t.updated_at, t.last_opened_at
          FROM tasks t
          JOIN projects p ON p.id = t.project_id
          JOIN task_environments e ON e.task_id = t.id
          {filter}
-         ORDER BY t.last_opened_at DESC, t.updated_at DESC, t.id ASC"
+         ORDER BY t.pinned DESC, t.last_opened_at DESC, t.updated_at DESC, t.id ASC"
     )
 }
 
@@ -236,6 +238,7 @@ struct RawTask {
     baseline: Option<String>,
     profile_json: String,
     archived: bool,
+    pinned: bool,
     created_at: i64,
     updated_at: i64,
     last_opened_at: i64,
@@ -276,6 +279,7 @@ impl RawTask {
             worktree,
             profile,
             archived: self.archived,
+            pinned: self.pinned,
             created_at: unsigned_timestamp(self.created_at)?,
             updated_at: unsigned_timestamp(self.updated_at)?,
             last_opened_at: unsigned_timestamp(self.last_opened_at)?,
@@ -295,9 +299,10 @@ fn map_task_row(row: &Row<'_>) -> rusqlite::Result<RawTask> {
         baseline: row.get(7)?,
         profile_json: row.get(8)?,
         archived: row.get(9)?,
-        created_at: row.get(10)?,
-        updated_at: row.get(11)?,
-        last_opened_at: row.get(12)?,
+        pinned: row.get(10)?,
+        created_at: row.get(11)?,
+        updated_at: row.get(12)?,
+        last_opened_at: row.get(13)?,
     })
 }
 
@@ -365,6 +370,7 @@ mod tests {
         )
         .unwrap();
         assert!(!paths.tasks_file.exists());
+        assert!(!task.pinned);
         assert_eq!(
             TaskRepository::list(&paths.database_file, false)
                 .unwrap()

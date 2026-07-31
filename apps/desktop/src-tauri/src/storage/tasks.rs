@@ -53,6 +53,8 @@ pub struct TaskRecord {
     pub worktree: Option<TaskWorktree>,
     pub profile: TaskRuntimeProfile,
     pub archived: bool,
+    #[serde(default)]
+    pub pinned: bool,
     pub created_at: u64,
     pub updated_at: u64,
     pub last_opened_at: u64,
@@ -170,6 +172,7 @@ impl TaskStore {
             worktree,
             profile,
             archived: existing.as_ref().is_some_and(|task| task.archived),
+            pinned: existing.as_ref().is_some_and(|task| task.pinned),
             created_at: existing.as_ref().map(|task| task.created_at).unwrap_or(now),
             updated_at: now,
             last_opened_at: existing
