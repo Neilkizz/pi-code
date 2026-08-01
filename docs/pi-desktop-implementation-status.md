@@ -128,6 +128,16 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-01）：重建并 ad-hoc 签名 Release 应用，种子一个指向含 `index.html`（内联 `<img src="photo.png">`）与 `doc.pdf` 的临时工作区任务后启动；AX 辅助功能树点击工具栏 Preview 复选框打开底部预览面板 → 点击「启动预览」后地址栏显示 `http://127.0.0.1:63517`，截图确认 iframe 实际渲染「Hello Preview」标题与红色 64px 图片（CSP `frame-src`/`img-src` 放行生效）；预览 Console 逐行显示 `GET / 200 text/html; charset=utf-8 361 B` 与 `GET photo.png 200 image/png 70 B`；`curl /doc.pdf` 返回 `200 application/pdf`（596 B）、`curl /%2e%2e/secret.txt` 返回 `400`（路径穿越拦截）、`curl /` 返回 `200 text/html`；点击「停止预览」后端口连接拒绝且 UI 恢复为「启动预览」；退出应用后预览端口关闭（`PreviewManager::stop_all` 无泄漏）。冒烟测试任务与工作区已清理。
 
+### V3 Session Tree / Fork / Compaction v1 实施进度（2026-08-01）
+
+1. 确认 Pi SDK（`@earendil-works/pi-coding-agent` v0.83）已内置完整会话树/压缩/分支引擎：会话 JSONL 文件即 `id/parentId` 树，自动压缩默认开启，`SessionManager.getTree()/getLeafId()/buildSessionContext()` 可用；本轮为桌面侧接线；
+2. Protocol：`TaskTranscriptMessage.role` 扩展 `compactionSummary`/`branchSummary` 并新增可选 `label`；新增 `SessionTree`/`SessionTreeEntry`；`DesktopToHostPayload` 加 `task.getTree`，`HostToDesktopPayload` 加 `task.tree`；`ProtocolFeature` 加 `sessions-tree`；
+3. Host（`desktop-host.ts`）：`DesktopSessionRuntime` 增加 `sessionManager` 字段；`task.history` 的 `toTranscriptMessages` 放行压缩/分支摘要角色并透传 label（其文本取自 `summary` 字段）；`dispatch` 加 `task.getTree`（sessionWorker 模式直接 emit，worker 模式经 TaskWorkerProxy 转发）；新增 `mapSessionTree`（导出纯函数，展开全树、按 `getLeafId` 沿 parentId 回溯标记 `current`）；
+4. 前端：`sessions.tree` Feature Flag（默认关）；`TaskViewState` 加 `tree`/`treeLoading`；`task.history` 到达且 flag 开启时请求 `task.getTree`；`consumePiEvent` 处理 `compaction_start/end` 推送活动；Timeline 内联渲染「上下文已压缩」分隔卡与「在此分叉」分支卡（含 label）；检查器新增只读「会话树」Tab（flag 门控）递归渲染树、当前叶子路径高亮并带「当前」徽标，支持刷新；
+5. 回退：`sessions.tree` 关闭即不请求树、不显示会话树 Tab，Timeline 仍正确渲染压缩/分支标记（避免误当 assistant 气泡）。
+
+验证证据：新增 host 纯函数测试 3 项（`toTranscriptMessages` 含摘要角色与 label、附件上下文剥离、`mapSessionTree` 树展开与 current 标记）全部通过，host 全量测试 22/22；新增前端 Timeline 标记测试 1 项与 `SessionTreeView.test.tsx` 4 项；`npm --prefix apps/desktop run test:unit`（17 文件 / 74 项通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。交互式 Fork/Compact/Steer 与 `pi_sessions` 表接线留待 v2。
+
 ---
 
 ## 2. 当前运行架构
@@ -583,7 +593,7 @@ npm run desktop:dmg
 | ID | 工作 | 依赖 | 估算 | 验收 | 风险与回滚 |
 |---|---|---|---:|---|---|
 | NEXT-W01 | Preview/Dev Server | Pane、Broker | 7 人日 | ✅ HTML/Image/PDF 静态预览、独立本地 Origin、Console 日志；端口审批留待 v2 | 静态 Preview 先行 |
-| NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | 分叉点、恢复、Context 标记一致 | 只读 Tree Feature Flag |
+| NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | ✅ 只读会话树、压缩/分支标记、当前叶子高亮；交互式 Fork/Compact 留待 v2 | 只读 Tree Feature Flag |
 | NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | 顺序、取消、崩溃恢复、IME | 继续单轮发送 |
 | NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | Waiting/Done/Failed、Focus 抑制 | 设置总开关 |
 | NEXT-W05 | Quick Entry + Screenshot | W03、Attachment | 7 人日 | 全局快捷键、150 ms、权限拒绝降级 | 普通主窗口入口保留 |

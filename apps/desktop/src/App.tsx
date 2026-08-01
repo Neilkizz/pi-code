@@ -25,6 +25,7 @@ import {
   createTask as createPersistedTask,
   createScratchWorkspace,
   deleteAttachment,
+  getSessionTree,
   inspectGitRepository,
   invokeDesktopBootstrap,
   listEndpoints,
@@ -49,6 +50,7 @@ import {
 } from "./app/CommandPalette";
 import { SessionSidebar } from "./features/sessions/SessionSidebar";
 import { SessionWorkspace } from "./features/sessions/SessionWorkspace";
+import { isFeatureEnabled } from "./features/flags";
 import { ProjectCenter } from "./features/projects/ProjectCenter";
 import {
   SettingsCenter,
@@ -555,6 +557,27 @@ export function App() {
             ? message.messages
             : current.messages,
       }));
+      if (isFeatureEnabled("sessions.tree")) {
+        updateTaskView(message.taskId, (current) => ({
+          ...current,
+          treeLoading: true,
+        }));
+        void getSessionTree(message.taskId).catch(() => {
+          updateTaskView(message.taskId, (current) => ({
+            ...current,
+            treeLoading: false,
+          }));
+        });
+      }
+      return;
+    }
+
+    if (message.type === "task.tree") {
+      updateTaskView(message.taskId, (current) => ({
+        ...current,
+        tree: message.tree,
+        treeLoading: false,
+      }));
       return;
     }
 
@@ -707,6 +730,16 @@ export function App() {
               ],
         };
       });
+      return;
+    }
+
+    if (event.type === "compaction_start") {
+      pushActivity(taskId, "system", t("Compacting context…"));
+      return;
+    }
+
+    if (event.type === "compaction_end") {
+      pushActivity(taskId, "system", t("Context compacted"));
       return;
     }
 
@@ -1441,6 +1474,11 @@ export function App() {
             void (activeRecord ? submitPrompt() : createTask(true))
           }
           onAbort={() => void abortTask()}
+          onRequestSessionTree={(taskId) =>
+            void getSessionTree(taskId).catch((cause: unknown) =>
+              setError(errorMessage(cause)),
+            )
+          }
           onError={setError}
         />
       )}

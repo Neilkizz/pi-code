@@ -74,6 +74,8 @@ function renderInspector() {
         task={task}
         runtimeStatus="idle"
         activities={[]}
+        treeLoading={false}
+        onRequestTree={vi.fn()}
         onError={vi.fn()}
       />
     </I18nProvider>,

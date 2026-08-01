@@ -127,11 +127,37 @@ export interface TaskBrokerRequest {
   arguments: Record<string, unknown>;
 }
 
+export type TaskTranscriptRole =
+  | "user"
+  | "assistant"
+  | "compactionSummary"
+  | "branchSummary";
+
 export interface TaskTranscriptMessage {
   id: string;
-  role: "user" | "assistant";
+  role: TaskTranscriptRole;
   text: string;
   createdAt?: number;
+  /** Branch label attached to a branchSummary entry, when present. */
+  label?: string;
+}
+
+export interface SessionTreeEntry {
+  entryId: string;
+  parentEntryId: string | null;
+  type: string;
+  label?: string;
+  /** First-line text for message entries; the summary for compaction/branch entries. */
+  text?: string;
+  timestamp?: string;
+  /** True when this entry lies on the current leaf path. */
+  current: boolean;
+}
+
+export interface SessionTree {
+  taskId: string;
+  leafId: string;
+  entries: SessionTreeEntry[];
 }
 
 export interface DesktopShellSnapshot {
@@ -554,6 +580,7 @@ export type DesktopToHostPayload =
     }
   | { type: "task.abort"; taskId: string }
   | { type: "task.close"; taskId: string }
+  | { type: "task.getTree"; taskId: string }
   | {
       type: "task.permission.respond";
       taskId: string;
@@ -609,6 +636,11 @@ export type HostToDesktopPayload =
       type: "task.history";
       taskId: string;
       messages: TaskTranscriptMessage[];
+    }
+  | {
+      type: "task.tree";
+      taskId: string;
+      tree: SessionTree;
     }
   | {
       type: "task.permission.request";

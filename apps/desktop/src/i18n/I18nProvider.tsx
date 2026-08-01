@@ -288,6 +288,13 @@ const zhCN: Record<string, string> = {
   "Toggle preview pane": "切换预览面板",
   "Start a local preview server to render HTML, images, and PDFs from this task.":
     "启动本地预览服务，即可在此渲染本任务的 HTML、图片与 PDF。",
+  "Context compacted": "上下文已压缩",
+  "Branch here": "在此分叉",
+  "Compacting context…": "正在压缩上下文…",
+  "Session tree": "会话树",
+  "Current": "当前",
+  "Loading session tree…": "正在加载会话树…",
+  "No session tree yet.": "暂无会话树。",
   "Edit file": "编辑文件",
   Saved: "已保存",
   "Unsaved changes": "有未保存的更改",

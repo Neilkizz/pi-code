@@ -1,6 +1,7 @@
 const DEFAULT_FLAGS: Record<string, boolean> = {
   "files.lightEditor": true,
   "timeline.virtualization": true,
+  "sessions.tree": false,
 };
 
 /** Read a feature flag: an explicit localStorage override (`pi-desktop.flag.<name>`

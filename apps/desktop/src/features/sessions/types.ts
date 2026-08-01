@@ -1,4 +1,4 @@
-import type { TaskTranscriptMessage } from "@pi-desktop/protocol";
+import type { SessionTree, TaskTranscriptMessage } from "@pi-desktop/protocol";
 
 export interface ActivityItem {
   id: string;
@@ -18,10 +18,15 @@ export interface TaskViewState {
   streamingAssistantId?: string;
   activities: ActivityItem[];
   restored: boolean;
+  /** Read-only session tree (from task.getTree). Null = not loaded. */
+  tree?: SessionTree | null;
+  treeLoading: boolean;
 }
 
 export const EMPTY_TASK_VIEW: TaskViewState = {
   messages: [],
   activities: [],
   restored: false,
+  tree: null,
+  treeLoading: false,
 };

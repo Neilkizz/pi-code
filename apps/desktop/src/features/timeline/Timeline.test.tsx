@@ -10,6 +10,7 @@ const scrollTo = vi.fn();
 const baseView: TaskViewState = {
   restored: false,
   activities: [],
+  treeLoading: false,
   messages: [
     { id: "user-1", role: "user", text: "Inspect this project" },
     { id: "assistant-1", role: "assistant", text: "I am checking it." },
@@ -246,6 +247,24 @@ describe("Timeline", () => {
       expect(conversation.querySelectorAll(".message").length).toBe(50);
       expect(conversation.querySelectorAll(".timeline-spacer").length).toBe(0);
     });
+  });
+
+  it("renders compaction and branch summaries as timeline markers", () => {
+    const view = {
+      ...baseView,
+      messages: [
+        { id: "c1", role: "compactionSummary" as const, text: "Earlier context summarized.", createdAt: 1000 },
+        { id: "b1", role: "branchSummary" as const, text: "Branched to fix a bug.", label: "fix", createdAt: 2000 },
+      ],
+    };
+    renderTimeline(view);
+
+    expect(screen.getByText("Context compacted")).toBeDefined();
+    expect(screen.getByText("Earlier context summarized.")).toBeDefined();
+    expect(screen.getByText(/Branch here/)).toBeDefined();
+    expect(screen.getByText("Branched to fix a bug.")).toBeDefined();
+    expect(screen.getByText(/· fix$/)).toBeDefined();
+    expect(screen.queryAllByRole("article").length).toBe(0);
   });
 });
 

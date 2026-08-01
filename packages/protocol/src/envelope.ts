@@ -10,7 +10,8 @@ export type ProtocolFeature =
   | "capability-broker-v1"
   | "managed-extension-worker-v1"
   | "per-task-worker-v1"
-  | "snapshot-delta";
+  | "snapshot-delta"
+  | "sessions-tree";
 
 export interface DesktopCommandMetadata {
   protocolVersion: typeof DESKTOP_PROTOCOL_VERSION;

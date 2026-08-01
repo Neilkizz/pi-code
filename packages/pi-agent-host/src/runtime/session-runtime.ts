@@ -1,4 +1,7 @@
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import type {
+  AgentSession,
+  SessionManager,
+} from "@earendil-works/pi-coding-agent";
 import type { TaskRuntimeProfile } from "@pi-desktop/protocol";
 import type { PermissionGate } from "./permission-gate.js";
 import type { BrokerClient } from "./broker-client.js";
@@ -10,6 +13,7 @@ export interface DesktopSessionRuntime {
   cwd: string;
   profile: TaskRuntimeProfile;
   session: AgentSession;
+  sessionManager: SessionManager;
   permissionGate: PermissionGate;
   brokerClient: BrokerClient;
   extensionWorkers: ManagedExtensionWorker[];

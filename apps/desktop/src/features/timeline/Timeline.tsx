@@ -135,6 +135,24 @@ export function Timeline({
   }
 
   function renderMessage(message: TaskTranscriptMessage, measureRef?: (node: HTMLElement | null) => void) {
+    if (message.role === "compactionSummary" || message.role === "branchSummary") {
+      const isCompaction = message.role === "compactionSummary";
+      return (
+        <aside
+          className={isCompaction ? "timeline-compaction" : "timeline-branch"}
+          key={message.id}
+          ref={measureRef}
+        >
+          <div className="timeline-marker__label">
+            {isCompaction ? t("Context compacted") : t("Branch here")}
+            {message.label ? ` · ${message.label}` : ""}
+          </div>
+          {message.text ? (
+            <p className="timeline-marker__summary">{message.text}</p>
+          ) : null}
+        </aside>
+      );
+    }
     return (
       <article
         className={`message message--${message.role}`}

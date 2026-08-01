@@ -63,6 +63,7 @@ interface SessionWorkspaceProps {
   onIsolation: (isolation: TaskIsolation) => void;
   onSubmit: () => void;
   onAbort: () => void;
+  onRequestSessionTree?: (taskId: string) => void;
   onError: (message: string) => void;
 }
 
@@ -103,6 +104,7 @@ export function SessionWorkspace({
   onIsolation,
   onSubmit,
   onAbort,
+  onRequestSessionTree,
   onError,
 }: SessionWorkspaceProps) {
   const { t } = useI18n();
@@ -191,6 +193,9 @@ export function SessionWorkspace({
       task={record}
       runtimeStatus={runtimeTask?.status}
       activities={taskView.activities}
+      sessionTree={taskView.tree}
+      treeLoading={taskView.treeLoading}
+      onRequestTree={() => onRequestSessionTree?.(record.id)}
       onError={onError}
     />
   ) : undefined;

@@ -42,6 +42,7 @@ import type {
   WorkspaceWriteResult,
   WorktreeInfo,
 } from "@pi-desktop/protocol";
+import { createDesktopCommand } from "@pi-desktop/protocol";
 
 const HOST_MESSAGE_EVENT = "agent-host-message";
 const HOST_LIFECYCLE_EVENT = "agent-host-lifecycle";
@@ -86,6 +87,12 @@ export async function sendAgentHostMessage(
   message: DesktopToHostMessage,
 ): Promise<void> {
   return invoke("agent_host_send", { message });
+}
+
+export async function getSessionTree(taskId: string): Promise<void> {
+  return invoke("agent_host_send", {
+    message: createDesktopCommand({ type: "task.getTree", taskId }),
+  });
 }
 
 export async function stopAgentHost(): Promise<void> {

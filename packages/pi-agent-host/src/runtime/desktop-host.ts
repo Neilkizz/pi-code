@@ -8,6 +8,10 @@ import {
   VERSION,
   createAgentSession,
 } from "@earendil-works/pi-coding-agent";
+import type {
+  SessionEntry,
+  SessionTreeNode,
+} from "@earendil-works/pi-coding-agent";
 import {
   DESKTOP_PROTOCOL_MIN_VERSION,
   DESKTOP_PROTOCOL_VERSION,
@@ -23,6 +27,8 @@ import type {
   HostToDesktopPayload,
   HostToDesktopMessage,
   PiSessionEvent,
+  SessionTree,
+  SessionTreeEntry,
   TaskIsolation,
   TaskPromptAttachment,
   TaskRuntimeProfile,
@@ -176,6 +182,10 @@ export class DesktopHost {
         return this.sessionWorker
           ? this.abortTask(message.taskId)
           : this.requireTaskWorker(message.taskId).request(message);
+      case "task.getTree":
+        return this.sessionWorker
+          ? this.emitSessionTree(message.taskId)
+          : this.requireTaskWorker(message.taskId).request(message);
       case "task.close":
         return this.sessionWorker
           ? this.closeTask(message.taskId)
@@ -212,6 +222,7 @@ export class DesktopHost {
           "managed-extension-worker-v1",
           "per-task-worker-v1",
           "snapshot-delta",
+          "sessions-tree",
         ],
       },
     });
@@ -570,6 +581,7 @@ export class DesktopHost {
       cwd,
       profile: normalizedProfile,
       session,
+      sessionManager,
       permissionGate,
       brokerClient,
       extensionWorkers,
@@ -590,6 +602,15 @@ export class DesktopHost {
     this.sessions.set(taskId, runtime);
 
     return this.emitTaskState(taskId, cwd, "idle", normalizedProfile);
+  }
+
+  private emitSessionTree(taskId: string): void {
+    const runtime = this.sessions.get(taskId);
+    if (!runtime) {
+      return;
+    }
+    const tree = mapSessionTree(runtime.sessionManager, taskId);
+    this.emit({ type: "task.tree", taskId, tree }, { taskId });
   }
 
   private async configureEndpoints(
@@ -920,7 +941,7 @@ function toSerializableEvent(event: unknown): PiSessionEvent {
   }
 }
 
-function toTranscriptMessages(messages: unknown[]): TaskTranscriptMessage[] {
+export function toTranscriptMessages(messages: unknown[]): TaskTranscriptMessage[] {
   const transcript: TaskTranscriptMessage[] = [];
   let remainingCharacters = 1_000_000;
   for (const [index, value] of messages.entries()) {
@@ -932,22 +953,39 @@ function toTranscriptMessages(messages: unknown[]): TaskTranscriptMessage[] {
         ? "user"
         : value.role === "assistant"
           ? "assistant"
-          : undefined;
+          : value.role === "compactionSummary"
+            ? "compactionSummary"
+            : value.role === "branchSummary"
+              ? "branchSummary"
+              : undefined;
     if (!role) {
       continue;
     }
-    const text = stripAttachmentContext(messageText(value.content)).slice(
+    // Compaction/branch summary messages carry their text in `summary` rather
+    // than `content`.
+    const rawText =
+      role === "compactionSummary" || role === "branchSummary"
+        ? typeof value.summary === "string"
+          ? value.summary
+          : ""
+        : messageText(value.content);
+    const text = stripAttachmentContext(rawText).slice(
       0,
       Math.min(50_000, remainingCharacters),
     );
     if (!text) {
       continue;
     }
+    const label =
+      typeof value.label === "string" && value.label.length > 0
+        ? value.label
+        : undefined;
     transcript.push({
       id: `history-${index}`,
       role,
       text,
       createdAt: timestampMillis(value.timestamp),
+      ...(label ? { label } : {}),
     });
     remainingCharacters -= text.length;
     if (remainingCharacters <= 0 || transcript.length >= 200) {
@@ -955,6 +993,64 @@ function toTranscriptMessages(messages: unknown[]): TaskTranscriptMessage[] {
     }
   }
   return transcript;
+}
+
+export function mapSessionTree(
+  sessionManager: SessionManager,
+  taskId: string,
+): SessionTree {
+  const nodes = sessionManager.getTree();
+  const leafId = sessionManager.getLeafId();
+  const parentById = new Map<string, string | null>();
+  const collectParents = (node: SessionTreeNode): void => {
+    parentById.set(node.entry.id, node.entry.parentId);
+    for (const child of node.children) collectParents(child);
+  };
+  for (const node of nodes) collectParents(node);
+
+  const currentIds = new Set<string>();
+  let cursor: string | null = leafId;
+  while (cursor) {
+    currentIds.add(cursor);
+    cursor = parentById.get(cursor) ?? null;
+  }
+
+  const entries: SessionTreeEntry[] = [];
+  const flatten = (node: SessionTreeNode): void => {
+    const entry = node.entry;
+    const text = sessionEntryText(entry);
+    entries.push({
+      entryId: entry.id,
+      parentEntryId: entry.parentId,
+      type: entry.type,
+      ...(node.label ? { label: node.label } : {}),
+      ...(text ? { text } : {}),
+      ...(typeof entry.timestamp === "string" && entry.timestamp.length > 0
+        ? { timestamp: entry.timestamp }
+        : {}),
+      current: currentIds.has(entry.id),
+    });
+    for (const child of node.children) flatten(child);
+  };
+  for (const node of nodes) flatten(node);
+
+  return { taskId, leafId: leafId ?? "", entries };
+}
+
+function sessionEntryText(entry: SessionEntry): string {
+  if (entry.type === "message") {
+    const content = (entry.message as { content?: unknown }).content;
+    return firstLine(messageText(content));
+  }
+  if (entry.type === "compaction" || entry.type === "branch_summary") {
+    return firstLine(typeof entry.summary === "string" ? entry.summary : "");
+  }
+  return "";
+}
+
+function firstLine(value: string): string {
+  const line = value.split("\n")[0]?.trim() ?? "";
+  return line.length > 160 ? `${line.slice(0, 160)}…` : line;
 }
 
 function timestampMillis(value: unknown): number | undefined {

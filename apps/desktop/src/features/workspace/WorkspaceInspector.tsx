@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   DesktopTaskStatus,
   PersistedTask,
+  SessionTree,
   WorkspaceDiff,
   WorkspaceFileContent,
   WorkspaceFileEntry,
@@ -18,10 +19,11 @@ import {
 import { useI18n } from "../../i18n/I18nProvider";
 import { isFeatureEnabled } from "../flags";
 import type { ActivityItem } from "../sessions/types";
+import { SessionTreeView } from "../sessions/SessionTreeView";
 import { parseUnifiedDiff, type ParsedDiffHunk } from "./parseUnifiedDiff";
 import { FileEditor } from "./FileEditor";
 
-type InspectorTab = "changes" | "files" | "steps" | "security";
+type InspectorTab = "changes" | "files" | "steps" | "security" | "sessionTree";
 type Preview =
   | { kind: "diff"; value: WorkspaceDiff }
   | { kind: "file"; value: WorkspaceFileContent };
@@ -30,6 +32,9 @@ interface WorkspaceInspectorProps {
   task: PersistedTask;
   runtimeStatus?: DesktopTaskStatus;
   activities: ActivityItem[];
+  sessionTree?: SessionTree | null;
+  treeLoading: boolean;
+  onRequestTree: () => void;
   onError: (message: string) => void;
 }
 
@@ -47,6 +52,9 @@ export function WorkspaceInspector({
   task,
   runtimeStatus,
   activities,
+  sessionTree,
+  treeLoading,
+  onRequestTree,
   onError,
 }: WorkspaceInspectorProps) {
   const { t } = useI18n();
@@ -337,6 +345,17 @@ export function WorkspaceInspector({
           {t("Security Audit")}
           <span>{securityLogs.length}</span>
         </button>
+        {isFeatureEnabled("sessions.tree") ? (
+          <button
+            className={tab === "sessionTree" ? "is-active" : ""}
+            type="button"
+            role="tab"
+            aria-selected={tab === "sessionTree"}
+            onClick={() => setTab("sessionTree")}
+          >
+            {t("Session tree")}
+          </button>
+        ) : null}
       </div>
 
       <div className="workspace-inspector__browser">
@@ -481,7 +500,7 @@ export function WorkspaceInspector({
                 </p>
               ) : null}
             </div>
-          ) : (
+          ) : tab === "security" ? (
             <div className="inspector-activity-list">
               {securityLogs.map((log) => (
                 <div
@@ -506,12 +525,18 @@ export function WorkspaceInspector({
                 </div>
               ) : null}
             </div>
+          ) : (
+            <SessionTreeView
+              tree={sessionTree ?? null}
+              loading={treeLoading}
+              onRefresh={onRequestTree}
+            />
           )}
         </div>
       </div>
 
       <section className="workspace-preview">
-        {tab === "steps" || tab === "security" ? null : preview ? (
+        {tab === "steps" || tab === "security" || tab === "sessionTree" ? null : preview ? (
           <>
             <header>
               <div>
