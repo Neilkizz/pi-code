@@ -152,6 +152,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用后启动并打开已有任务；AX 设置 Composer textarea 值并回车发送一个长分析 prompt，任务进入「运行中」；随后 Composer 切换为跟进模式（「发送跟进」+「停止 Pi」双按钮）；再发送一条跟进后，AX 树确认「跟进已排队」活动与队列徽标「1 条跟进待处理」，跟进消息不进入 Timeline（正确等待当前回合）；点击徽标展开弹层显示跟进内容，点「取消全部」后徽标消失（host `session.clearQueue()` + `queue_update` 生效）；再次排队一条跟进后按「停止 Pi」，任务回到「空闲」、徽标同时清空（Stop 顺带清队列）、Composer 恢复普通「发送提示词」。冒烟期间因该任务 worktree 的 read 工具权限失败，首轮未完成，跟进「按序投递」（当前回合结束后的 message_start 追加）由 SDK 队列排空逻辑与单元测试覆盖。冒烟后退出应用，交付环境干净。
 
+### V3 Notification + Dock Badge 实施进度（2026-08-01）
+
+1. 新增 `tauri-plugin-notification`（macOS 走 notify-rust，无额外签名/entitlement），`lib.rs` 注册插件，`capabilities/default.json` 加 `notification:default`；
+2. 新增 `app_notify`（`app.notification().builder().title().body().show()`）与 `app_set_badge`（`app.get_webview_window("main")?.set_badge_count(count)`，底层 `NSApplication.dockTile.setBadgeLabel`，`0`/`None` 清除）两个 Tauri Command；
+3. `UpdatePreferences` 加 `notificationsEnabled`（`#[serde(default)]` 向后兼容），`update_preferences_get/save` 命令复用；
+4. 前端新增 `notificationState.ts` 纯函数：`computeDockBadge`（等待+失败任务计数）、`detectStatusTransition`（首个状态不算迁移，避免重连误报）；App.tsx `task.status` 分支检测迁移 → 更新 Dock 徽标；开关开启且 `document.visibilityState === "hidden"`（焦点抑制）时发原生通知（title 从任务列表查、回退「Pi 任务」）；bootstrap 时设初始徽标并加载开关；
+5. 设置 General 新增「通知」开关卡（`update-toggle` 复选框，绑定 `notificationsEnabled`，保存到 `updates.json`）。
+
+验证证据：新增前端 `notificationState.test.ts` 7 项（徽标计数、各迁移、首个状态不算、非通知态忽略）；`npm --prefix apps/desktop run test:unit`（19 文件 / 87 项通过）、`npm run typecheck`（通过）、`npm --prefix apps/desktop run build`（通过）、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。
+
+真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用（含 notification 插件与 `notification:default` capability）后启动正常，无崩溃；Settings → General 出现「通知」开关（AX 确认复选框），点击后 `updates.json` 持久化为 `notificationsEnabled: true`；后台化运行任务完成时迁移检测路径正常触发（Timeline 显示 OK 完成）。说明：原生通知横幅的实际展示依赖 macOS 对应用的「通知」授权（ad-hoc 未公证应用需用户在 系统设置→通知→Pi Desktop 手动开启），本冒烟环境未授予故横幅未上屏；Dock 徽标数字需任务处于 waiting/failed 边界态（本环境 worker/模型受限无法稳定触发），二者均由 `notificationState` 单元测试与 `app_set_badge`（Tauri 内置 `set_badge_count`）代码接线覆盖。冒烟后退出应用，交付环境干净。
+
 ---
 
 ## 2. 当前运行架构
@@ -609,7 +621,7 @@ npm run desktop:dmg
 | NEXT-W01 | Preview/Dev Server | Pane、Broker | 7 人日 | ✅ HTML/Image/PDF 静态预览、独立本地 Origin、Console 日志；端口审批留待 v2 | 静态 Preview 先行 |
 | NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | ✅ 只读会话树、压缩/分支标记、当前叶子高亮；交互式 Fork/Compact 留待 v2 | 只读 Tree Feature Flag |
 | NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | ✅ 运行中跟进排队、顺序、取消全部、队列持久化+恢复重提、IME | 继续单轮发送 |
-| NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | Waiting/Done/Failed、Focus 抑制 | 设置总开关 |
+| NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | ✅ Waiting/Done/Failed 原生通知、Dock 徽标（等待+失败）、Focus 抑制、设置总开关 | 无通知即现状 |
 | NEXT-W05 | Quick Entry + Screenshot | W03、Attachment | 7 人日 | 全局快捷键、150 ms、权限拒绝降级 | 普通主窗口入口保留 |
 
 ### 9.3 P2：开放生态与发布

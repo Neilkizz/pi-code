@@ -254,6 +254,14 @@ export async function openPreviewInBrowser(url: string): Promise<void> {
   return invoke("preview_open", { url });
 }
 
+export async function appNotify(title: string, body: string): Promise<void> {
+  return invoke("app_notify", { title, body });
+}
+
+export async function appSetBadge(count: number): Promise<void> {
+  return invoke("app_set_badge", { count });
+}
+
 export async function replayTaskEvents(
   taskId: string,
   afterEventId?: number,

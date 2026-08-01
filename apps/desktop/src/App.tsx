@@ -7,6 +7,7 @@ import type {
   DesktopBootstrap,
   DesktopShellSnapshot,
   DesktopTaskState,
+  DesktopTaskStatus,
   DesktopToHostPayload,
   EndpointProfile,
   HostToDesktopMessage,
@@ -19,13 +20,17 @@ import type {
   TaskPermissionMode,
   TaskPermissionRequest,
   TaskRuntimeProfile,
+  UpdatePreferences,
 } from "@pi-desktop/protocol";
 import {
   archiveTask as archivePersistedTask,
+  appNotify,
+  appSetBadge,
   createTask as createPersistedTask,
   createScratchWorkspace,
   deleteAttachment,
   getSessionTree,
+  getUpdatePreferences,
   inspectGitRepository,
   invokeDesktopBootstrap,
   listEndpoints,
@@ -40,6 +45,7 @@ import {
   sendAgentHostMessage,
   startAgentHost,
   stopAgentHost,
+  saveUpdatePreferences,
   touchTask,
 } from "./platform/tauri/bridge";
 import { AppShell } from "./app/AppShell";
@@ -51,6 +57,11 @@ import {
 import { SessionSidebar } from "./features/sessions/SessionSidebar";
 import { SessionWorkspace } from "./features/sessions/SessionWorkspace";
 import { isFeatureEnabled } from "./features/flags";
+import {
+  computeDockBadge,
+  detectStatusTransition,
+  type TaskCompletionTransition,
+} from "./features/notifications/notificationState";
 import { ProjectCenter } from "./features/projects/ProjectCenter";
 import {
   SettingsCenter,
@@ -129,6 +140,15 @@ export function App() {
   const replayingTasks = useRef(new Set<string>());
   const consumedHostMessages = useRef(new Set<string>());
   const reportedTaskWarnings = useRef(new Set<string>());
+  const lastTaskStatusRef = useRef(new Map<string, DesktopTaskStatus>());
+  const [appPreferences, setAppPreferences] = useState<UpdatePreferences>({
+    autoUpdatePiAgent: false,
+    autoUpdateExtensions: false,
+    notificationsEnabled: false,
+  });
+  const notificationsEnabled = appPreferences.notificationsEnabled;
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  notificationsEnabledRef.current = notificationsEnabled;
   const activeTaskIdRef = useRef<string | null>(activeTaskId);
   activeTaskIdRef.current = activeTaskId;
   const [hydratedTaskIds, setHydratedTaskIds] = useState<Set<string>>(
@@ -267,6 +287,17 @@ export function App() {
 
       setBootstrap(payload);
       setSnapshot(payload.snapshot);
+      for (const task of payload.snapshot.tasks) {
+        lastTaskStatusRef.current.set(task.id, task.status);
+      }
+      void appSetBadge(
+        computeDockBadge(
+          payload.snapshot.tasks.map((task) => task.status),
+        ),
+      ).catch(() => undefined);
+      void getUpdatePreferences()
+        .then((preferences) => setAppPreferences(preferences))
+        .catch(() => undefined);
       setTasks(savedTasks);
       setProjects(savedProjects);
       if (savedTasks[0]) {
@@ -493,6 +524,29 @@ export function App() {
         return;
       }
       loadingTasks.current.delete(message.task.id);
+      const previousStatus = lastTaskStatusRef.current.get(message.task.id);
+      const transition = detectStatusTransition(
+        previousStatus,
+        message.task.status,
+      );
+      lastTaskStatusRef.current.set(message.task.id, message.task.status);
+      if (transition) {
+        const badgeCount = computeDockBadge([
+          ...lastTaskStatusRef.current.values(),
+        ]);
+        void appSetBadge(badgeCount).catch(() => undefined);
+        if (
+          notificationsEnabledRef.current &&
+          !document.hasFocus()
+        ) {
+          const title =
+            tasks.find((task) => task.id === message.task.id)?.title ??
+            t("Pi Task");
+          void appNotify(title, t(transitionLabel(transition))).catch(
+            () => undefined,
+          );
+        }
+      }
       setSnapshot((current) => ({
         ...current,
         tasks: upsertTask(current.tasks, message.task),
@@ -1427,6 +1481,12 @@ export function App() {
     }
   }
 
+  function handleNotificationsChange(enabled: boolean): void {
+    const next = { ...appPreferences, notificationsEnabled: enabled };
+    setAppPreferences(next);
+    void saveUpdatePreferences(next).catch(() => undefined);
+  }
+
   async function restartHost(): Promise<void> {
     if (!bootstrap) {
       return;
@@ -1547,6 +1607,8 @@ export function App() {
           onProfilesChanged={setEndpoints}
           onRestartHost={() => void restartHost()}
           onClose={() => setActiveView("tasks")}
+          notificationsEnabled={notificationsEnabled}
+          onNotificationsChange={handleNotificationsChange}
         />
       ) : activeView === "projects" ? (
         <ProjectCenter
@@ -1745,5 +1807,16 @@ function writePendingPrompts(taskId: string, prompts: QueuedPrompt[]): void {
     }
   } catch {
     // Queue persistence is best-effort and must never block task lifecycle.
+  }
+}
+
+function transitionLabel(transition: TaskCompletionTransition): string {
+  switch (transition) {
+    case "completed":
+      return "Task completed";
+    case "failed":
+      return "Task failed";
+    case "waiting":
+      return "Task waiting";
   }
 }

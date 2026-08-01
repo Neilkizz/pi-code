@@ -34,6 +34,8 @@ interface SettingsCenterProps {
   onProfilesChanged: (endpoints: EndpointProfile[]) => void;
   onRestartHost: () => void;
   onClose: () => void;
+  notificationsEnabled: boolean;
+  onNotificationsChange: (enabled: boolean) => void;
 }
 
 export function SettingsCenter({
@@ -45,6 +47,8 @@ export function SettingsCenter({
   onProfilesChanged,
   onRestartHost,
   onClose,
+  notificationsEnabled,
+  onNotificationsChange,
 }: SettingsCenterProps) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -133,7 +137,10 @@ export function SettingsCenter({
               onRestartHost={onRestartHost}
             />
           ) : (
-            <GeneralSettings />
+            <GeneralSettings
+              notificationsEnabled={notificationsEnabled}
+              onNotificationsChange={onNotificationsChange}
+            />
           )}
         </div>
       </section>
@@ -141,7 +148,13 @@ export function SettingsCenter({
   );
 }
 
-function GeneralSettings() {
+function GeneralSettings({
+  notificationsEnabled,
+  onNotificationsChange,
+}: {
+  notificationsEnabled: boolean;
+  onNotificationsChange: (enabled: boolean) => void;
+}) {
   const { locale, setLocale, setTheme, t, theme } = useI18n();
   const [density, setDensity] = useState<TimelineDensity>(() =>
     readTimelineDensity()
@@ -200,6 +213,24 @@ function GeneralSettings() {
             <option value="light">{t("Light")}</option>
             <option value="dark">{t("Dark")}</option>
           </select>
+        </section>
+
+        <section className="panel preference-card">
+          <label className="update-toggle">
+            <span>
+              <strong>{t("Notifications")}</strong>
+              <small>
+                {t(
+                  "Notify when a task completes, fails, or waits; the Dock badge shows pending tasks.",
+                )}
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={notificationsEnabled}
+              onChange={(event) => onNotificationsChange(event.target.checked)}
+            />
+          </label>
         </section>
 
         <section className="panel preference-card">

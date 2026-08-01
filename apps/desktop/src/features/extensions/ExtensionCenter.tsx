@@ -65,6 +65,7 @@ export function ExtensionCenter() {
     useState<UpdatePreferences>({
       autoUpdatePiAgent: false,
       autoUpdateExtensions: false,
+      notificationsEnabled: false,
     });
   const marketSequence = useRef(0);
 

@@ -33,6 +33,7 @@ use storage::task_repository::TaskRepository;
 use storage::tasks::{TaskCreateDraft, TaskDraft, TaskIsolation, TaskRecord, TaskWorktree};
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_notification::NotificationExt;
 use terminal::{TerminalLaunch, TerminalManager};
 use updates::{AutomaticUpdateReport, PiAgentUpdateStatus, UpdatePreferences};
 use workspace::{
@@ -261,6 +262,26 @@ fn preview_status(
 #[tauri::command]
 fn preview_open(url: String) -> Result<(), String> {
     open_in_browser(&url)
+}
+
+#[tauri::command]
+fn app_notify(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+    app.notification()
+        .builder()
+        .title(&title)
+        .body(&body)
+        .show()
+        .map_err(|error| format!("Cannot show notification: {error}"))
+}
+
+#[tauri::command]
+fn app_set_badge(app: tauri::AppHandle, count: u64) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "No main window for badge".to_string())?;
+    window
+        .set_badge_count(if count > 0 { Some(count as i64) } else { None })
+        .map_err(|error| format!("Cannot set dock badge: {error}"))
 }
 
 #[tauri::command]
@@ -942,6 +963,8 @@ pub fn run() {
             preview_stop,
             preview_status,
             preview_open,
+            app_notify,
+            app_set_badge,
             task_list,
             project_list,
             scratch_workspace_create,
@@ -991,6 +1014,7 @@ pub fn run() {
             extension_delete
         ])
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 let _ = window.state::<AgentSupervisor>().stop();

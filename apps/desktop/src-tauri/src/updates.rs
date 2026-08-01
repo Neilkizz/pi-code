@@ -33,6 +33,8 @@ pub struct UpdatePreferences {
     pub auto_update_pi_agent: bool,
     #[serde(default)]
     pub auto_update_extensions: bool,
+    #[serde(default)]
+    pub notifications_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,6 +84,7 @@ impl Default for UpdatePreferences {
         Self {
             auto_update_pi_agent: false,
             auto_update_extensions: false,
+            notifications_enabled: false,
         }
     }
 }
@@ -708,6 +711,7 @@ mod tests {
             UpdatePreferences {
                 auto_update_pi_agent: true,
                 auto_update_extensions: true,
+                notifications_enabled: false,
             },
         )
         .expect("preferences");

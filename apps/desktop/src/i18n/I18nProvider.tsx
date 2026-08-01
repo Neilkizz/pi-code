@@ -94,6 +94,13 @@ const zhCN: Record<string, string> = {
   Appearance: "外观",
   "Use the language that feels most natural for directing Pi.":
     "选择你最习惯的界面语言来指挥 Pi。",
+  Notifications: "通知",
+  "Notify when a task completes, fails, or waits; the Dock badge shows pending tasks.":
+    "任务完成、失败或等待时发送系统通知；Dock 徽标显示待处理任务数。",
+  "Task completed": "任务已完成",
+  "Task failed": "任务失败",
+  "Task waiting": "任务等待中",
+  "Pi Task": "Pi 任务",
   "Follow system": "跟随系统",
   Light: "浅色",
   Dark: "深色",

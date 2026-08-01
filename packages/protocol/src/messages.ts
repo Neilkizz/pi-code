@@ -535,6 +535,7 @@ export interface ExtensionUpdate {
 export interface UpdatePreferences {
   autoUpdatePiAgent: boolean;
   autoUpdateExtensions: boolean;
+  notificationsEnabled: boolean;
 }
 
 export interface PiAgentUpdateStatus {
