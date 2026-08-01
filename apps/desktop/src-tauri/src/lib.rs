@@ -14,6 +14,7 @@ use agent::protocol::{
 };
 use agent::supervisor::{AgentHostLaunch, AgentSupervisor};
 use broker::service::BrokerService;
+use core_graphics::access::ScreenCaptureAccess;
 use git::repository::{inspect_repository, RepositoryInfo};
 use git::worktree::{WorktreeInfo, WorktreeManager};
 use marketplace::{MarketplacePage, MarketplaceQuery};
@@ -31,8 +32,9 @@ use storage::extensions::{ExtensionDraft, ExtensionProfile, ExtensionScanResult,
 use storage::project_repository::{ProjectRepository, ProjectSummary};
 use storage::task_repository::TaskRepository;
 use storage::tasks::{TaskCreateDraft, TaskDraft, TaskIsolation, TaskRecord, TaskWorktree};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri_plugin_notification::NotificationExt;
 use terminal::{TerminalLaunch, TerminalManager};
 use updates::{AutomaticUpdateReport, PiAgentUpdateStatus, UpdatePreferences};
@@ -282,6 +284,16 @@ fn app_set_badge(app: tauri::AppHandle, count: u64) -> Result<(), String> {
     window
         .set_badge_count(if count > 0 { Some(count as i64) } else { None })
         .map_err(|error| format!("Cannot set dock badge: {error}"))
+}
+
+#[tauri::command]
+fn quick_entry_hide(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("quick-entry") {
+        window
+            .hide()
+            .map_err(|error| format!("Cannot hide quick entry: {error}"))?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -615,6 +627,46 @@ async fn attachment_pick(
     .await
     .map_err(|error| error.to_string())??;
     AttachmentStore::import(&paths, &task_id, &picked)
+}
+
+#[tauri::command]
+async fn attachment_screenshot(
+    app: tauri::AppHandle,
+    task_id: String,
+) -> Result<TaskAttachment, String> {
+    if !ScreenCaptureAccess::default().preflight() {
+        return Err("SCREEN_RECORDING_PERMISSION_DENIED".to_string());
+    }
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    Database::initialize(&paths)?;
+
+    // Hide the quick-entry window so the captured screen shows the user's work.
+    if let Some(window) = app.get_webview_window("quick-entry") {
+        let _ = window.hide();
+    }
+
+    let destination =
+        std::env::temp_dir().join(format!("pi-screenshot-{}.png", uuid::Uuid::new_v4()));
+    let destination_for_spawn = destination.clone();
+    let output = tauri::async_runtime::spawn_blocking(move || {
+        std::process::Command::new("/usr/sbin/screencapture")
+            .args(["-x", "-o"])
+            .arg(&destination_for_spawn)
+            .output()
+            .map_err(|error| format!("Cannot capture screen: {error}"))
+    })
+    .await
+    .map_err(|error| error.to_string())??;
+
+    if !output.status.success() || !destination.exists() {
+        return Err("Screen capture failed to produce an image".to_string());
+    }
+
+    let mut imported = AttachmentStore::import(&paths, &task_id, &[destination.clone()])?;
+    let _ = std::fs::remove_file(&destination);
+    imported
+        .pop()
+        .ok_or_else(|| "Screen capture produced no attachment".to_string())
 }
 
 #[tauri::command]
@@ -965,6 +1017,7 @@ pub fn run() {
             preview_open,
             app_notify,
             app_set_badge,
+            quick_entry_hide,
             task_list,
             project_list,
             scratch_workspace_create,
@@ -980,6 +1033,7 @@ pub fn run() {
             task_event_replay,
             attachment_list,
             attachment_pick,
+            attachment_screenshot,
             attachment_delete,
             terminal_start,
             terminal_input,
@@ -1015,8 +1069,26 @@ pub fn run() {
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .setup(|app| {
+            use tauri_plugin_global_shortcut::ShortcutState;
+            let handle = app.handle().clone();
+            handle.global_shortcut().on_shortcut(
+                "CmdOrCtrl+Shift+Space",
+                move |app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        if let Some(window) = app.get_webview_window("quick-entry") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                        let _ = app.emit("quick-entry-open", ());
+                    }
+                },
+            )?;
+            Ok(())
+        })
         .on_window_event(|window, event| {
-            if matches!(event, tauri::WindowEvent::Destroyed) {
+            if matches!(event, tauri::WindowEvent::Destroyed) && window.label() == "main" {
                 let _ = window.state::<AgentSupervisor>().stop();
                 let _ = window.state::<TerminalManager>().stop_all();
                 window.state::<PreviewManager>().stop_all();

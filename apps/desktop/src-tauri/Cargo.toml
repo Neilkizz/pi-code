@@ -15,6 +15,7 @@ tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
 base64 = "0.22"
+core-graphics = "0.25"
 globset = "0.4"
 keyring = "4.1.5"
 libc = "0.2"
@@ -26,6 +27,7 @@ semver = "1.0"
 sha2 = "0.10"
 tauri = { version = "2.0.0", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-global-shortcut = "2"
 tauri-plugin-notification = "2"
 thiserror = "1.0"
 tiny_http = "0.12"

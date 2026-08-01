@@ -22,15 +22,19 @@ import type {
   TaskRuntimeProfile,
   UpdatePreferences,
 } from "@pi-desktop/protocol";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   archiveTask as archivePersistedTask,
   appNotify,
   appSetBadge,
+  captureScreenshotAttachment,
   createTask as createPersistedTask,
   createScratchWorkspace,
   deleteAttachment,
   getSessionTree,
   getUpdatePreferences,
+  hideQuickEntryWindow,
   inspectGitRepository,
   invokeDesktopBootstrap,
   listEndpoints,
@@ -1041,9 +1045,20 @@ export function App() {
     setPermissionRequests([]);
   }
 
-  async function createTask(submitInitialPrompt = false): Promise<void> {
-    const normalizedCwd = cwd.trim();
-    const initialPrompt = prompt.trim();
+  async function createTask(
+    submitInitialPrompt = false,
+    options?: {
+      initialPrompt?: string;
+      initialAttachments?: TaskAttachment[];
+      captureScreenshot?: boolean;
+      cwdOverride?: string;
+      isolationOverride?: TaskIsolation;
+    },
+  ): Promise<void> {
+    const effectiveCwd = (options?.cwdOverride ?? cwd).trim();
+    const effectiveIsolation = options?.isolationOverride ?? isolation;
+    const initialPrompt = (options?.initialPrompt ?? prompt).trim();
+    const normalizedCwd = effectiveCwd;
     if (!normalizedCwd) {
       setError(t("Select a project folder before sending"));
       return;
@@ -1055,13 +1070,13 @@ export function App() {
 
     await runExclusiveSubmission(async () => {
       setError(null);
-      if (isolation === "worktree" && projectCheck !== "git") {
+      if (effectiveIsolation === "worktree" && projectCheck !== "git") {
         setError(t("A Git repository is required for an isolated worktree"));
         return;
       }
       const saved = await createPersistedTask({
         projectPath: normalizedCwd,
-        isolation,
+        isolation: effectiveIsolation,
         profile: taskProfile,
       });
       loadingTasks.current.add(saved.id);
@@ -1086,10 +1101,66 @@ export function App() {
         return;
       }
       if (submitInitialPrompt) {
-        await submitPromptForTask(saved.id, initialPrompt, []);
+        let attachments = options?.initialAttachments ?? [];
+        if (options?.captureScreenshot) {
+          try {
+            const shot = await captureScreenshotAttachment(saved.id);
+            attachments = [shot, ...attachments];
+          } catch (cause: unknown) {
+            // Graceful degradation: still submit the text prompt without a screenshot.
+            setError(
+              `${t("Screen Recording is not authorized")} · ${errorMessage(cause)}`,
+            );
+          }
+        }
+        await submitPromptForTask(saved.id, initialPrompt, attachments);
       }
     });
   }
+
+  async function handleQuickEntrySubmit(payload: {
+    prompt: string;
+    captureScreenshot: boolean;
+  }): Promise<void> {
+    void hideQuickEntryWindow().catch(() => undefined);
+    setActiveView("tasks");
+    setActiveTaskId(null);
+    try {
+      const scratch = await createScratchWorkspace();
+      await createTask(true, {
+        initialPrompt: payload.prompt,
+        captureScreenshot: payload.captureScreenshot,
+        cwdOverride: scratch,
+        isolationOverride: "currentCheckout",
+      });
+    } catch (cause: unknown) {
+      showError(cause);
+    }
+    const mainWindow = getCurrentWindow();
+    void mainWindow.show();
+    void mainWindow.setFocus();
+  }
+
+  const quickEntryHandlerRef = useRef(handleQuickEntrySubmit);
+  quickEntryHandlerRef.current = handleQuickEntrySubmit;
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen<{ prompt: string; captureScreenshot: boolean }>(
+      "quick-entry-submit",
+      (event) => {
+        void quickEntryHandlerRef.current(event.payload);
+      },
+    ).then((fn) => {
+      if (disposed) fn();
+      else unlisten = fn;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   async function chooseProjectFolder(): Promise<void> {
     try {

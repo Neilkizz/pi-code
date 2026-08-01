@@ -22,6 +22,19 @@
         "transparent": false,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
+      },
+      {
+        "label": "quick-entry",
+        "title": "Pi Quick Entry",
+        "width": 560,
+        "height": 360,
+        "resizable": false,
+        "center": true,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {

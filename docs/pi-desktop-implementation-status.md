@@ -164,6 +164,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用（含 notification 插件与 `notification:default` capability）后启动正常，无崩溃；Settings → General 出现「通知」开关（AX 确认复选框），点击后 `updates.json` 持久化为 `notificationsEnabled: true`；后台化运行任务完成时迁移检测路径正常触发（Timeline 显示 OK 完成）。说明：原生通知横幅的实际展示依赖 macOS 对应用的「通知」授权（ad-hoc 未公证应用需用户在 系统设置→通知→Pi Desktop 手动开启），本冒烟环境未授予故横幅未上屏；Dock 徽标数字需任务处于 waiting/failed 边界态（本环境 worker/模型受限无法稳定触发），二者均由 `notificationState` 单元测试与 `app_set_badge`（Tauri 内置 `set_badge_count`）代码接线覆盖。冒烟后退出应用，交付环境干净。
 
+### V3 Quick Entry + Screenshot 实施进度（2026-08-01）
+
+1. 新增 `tauri-plugin-global-shortcut`（Rust 侧 `.setup()` 注册 `CmdOrCtrl+Shift+Space`，无需 capability）与 `core-graphics`（`ScreenCaptureAccess::preflight()` 做 Screen Recording TCC 门控）；
+2. `tauri.conf.json` 新增第二个窗口 `label: "quick-entry"`（560×360、centered、alwaysOnTop、skipTaskbar、默认隐藏）；`capabilities/default.json` windows 覆盖 `quick-entry`；
+3. 新命令 `attachment_screenshot(task_id)`：preflight 拒绝→返回 `SCREEN_RECORDING_PERMISSION_DENIED`（前端映射 i18n 并降级）；先隐藏 quick-entry 窗口→`spawn_blocking` 调 `/usr/sbin/screencapture -x -o` 整屏捕获→`AttachmentStore::import` 复制/哈希/分类/入库→返回 `TaskAttachment`；
+4. 前端 `main.tsx` 按 `getCurrentWindow().label === "quick-entry"` 分支渲染轻量 `QuickEntry.tsx`（prompt 输入 + 截图开关 + 提交，Enter 提交/Esc 隐藏，提交时 emit `quick-entry-submit`）；主窗口 App 监听该事件，`handleQuickEntrySubmit` 复用 `createScratchWorkspace` + 重构后的 `createTask`（支持 `initialPrompt`/`initialAttachments`/`captureScreenshot`），截图在任务创建后导入再随 `task.prompt` 提交，截图失败仍以纯文本提交（优雅降级）；
+5. `on_window_event` 增加 `window.label() == "main"` 守卫，quick-entry 窗口关闭不再误停运行时。
+
+验证证据：新增前端 `QuickEntry.test.tsx` 4 项（渲染、空 prompt 禁用提交、emit 负载、截图开关）；`npm --prefix apps/desktop run test:unit`（20 文件 / 91 项通过）、`npm run typecheck`（通过）、`npm --prefix apps/desktop run build`（通过）、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。
+
+真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用后 `CGWindowList` 确认 quick-entry 窗口存在且默认隐藏（560×360）；`Cmd+Shift+Space` 全局快捷键经 `System Events` keystroke 触发后窗口上屏（AX 确认标题「快速发起」/占位符/「截图」开关/「提交」按钮完整渲染；注：CGEvent 合成键事件不触发 Carbon 热键，真实键事件可）；提交后主窗口 AX 树确认隐藏修复生效（quick-entry `onscreen` 消失）、新 scratch 任务创建、prompt 进入 Timeline 且 Composer 转「发送跟进」（任务运行中）；开启「截图」提交时因本环境未授予 Screen Recording 权限，`attachment_screenshot` 返回 `SCREEN_RECORDING_PERMISSION_DENIED` 并优雅降级为纯文本提交（任务无附件）；普通 New Chat 入口不受影响。冒烟中修复 quick-entry 提交后未隐藏问题（新增 `quick_entry_hide` 命令，主窗口 `handleQuickEntrySubmit` 开头调用）。冒烟测试任务与 scratch 目录已清理。
+
 ---
 
 ## 2. 当前运行架构
@@ -622,7 +634,7 @@ npm run desktop:dmg
 | NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | ✅ 只读会话树、压缩/分支标记、当前叶子高亮；交互式 Fork/Compact 留待 v2 | 只读 Tree Feature Flag |
 | NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | ✅ 运行中跟进排队、顺序、取消全部、队列持久化+恢复重提、IME | 继续单轮发送 |
 | NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | ✅ Waiting/Done/Failed 原生通知、Dock 徽标（等待+失败）、Focus 抑制、设置总开关 | 无通知即现状 |
-| NEXT-W05 | Quick Entry + Screenshot | W03、Attachment | 7 人日 | 全局快捷键、150 ms、权限拒绝降级 | 普通主窗口入口保留 |
+| NEXT-W05 | Quick Entry + Screenshot | W03、Attachment | 7 人日 | ✅ 全局快捷键唤起 Quick Entry、整屏截图、Screen Recording 拒绝降级 | 普通主窗口入口保留 |
 
 ### 9.3 P2：开放生态与发布
 

@@ -179,6 +179,16 @@ export async function pickAttachments(
   return invoke<TaskAttachment[]>("attachment_pick", { taskId });
 }
 
+export async function captureScreenshotAttachment(
+  taskId: string,
+): Promise<TaskAttachment> {
+  return invoke<TaskAttachment>("attachment_screenshot", { taskId });
+}
+
+export async function hideQuickEntryWindow(): Promise<void> {
+  return invoke("quick_entry_hide");
+}
+
 export async function deleteAttachment(
   taskId: string,
   id: string,
