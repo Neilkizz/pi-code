@@ -278,6 +278,16 @@ const zhCN: Record<string, string> = {
     "大文件已截断；预览上限为 1 MiB / 5,000 行。",
   "Binary content is not rendered as text.":
     "二进制内容不会以文本形式渲染。",
+  "Start preview": "启动预览",
+  "Stop preview": "停止预览",
+  "Open in browser": "在浏览器中打开",
+  "Preview console": "预览控制台",
+  "Clear log": "清空日志",
+  "No requests yet.": "暂无请求。",
+  "Resize preview": "调整预览面板大小",
+  "Toggle preview pane": "切换预览面板",
+  "Start a local preview server to render HTML, images, and PDFs from this task.":
+    "启动本地预览服务，即可在此渲染本任务的 HTML、图片与 PDF。",
   "Edit file": "编辑文件",
   Saved: "已保存",
   "Unsaved changes": "有未保存的更改",

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useI18n } from "../../i18n/I18nProvider";
 import {
+  clampPreviewHeight,
   clampSideWidth,
   clampTerminalHeight,
   DEFAULT_PANE_LAYOUT,
@@ -17,15 +18,19 @@ interface PaneLayoutProps {
   chatPane: ReactNode;
   inspectorPane?: ReactNode;
   terminalPane?: ReactNode;
+  previewPane?: ReactNode;
   config: PaneLayoutConfig;
   hasRecord: boolean;
   onSideWidthChange: (width: number) => void;
   onTerminalHeightChange: (height: number) => void;
+  onPreviewHeightChange: (height: number) => void;
   onResetSideWidth?: () => void;
   onResetTerminalHeight?: () => void;
+  onResetPreviewHeight?: () => void;
 }
 
-type NarrowTab = "chat" | "inspector" | "terminal";
+type NarrowTab = "chat" | "inspector" | "terminal" | "preview";
+type RowTarget = "preview" | "terminal";
 
 const NARROW_BREAKPOINT = 760;
 
@@ -33,12 +38,15 @@ export function PaneLayout({
   chatPane,
   inspectorPane,
   terminalPane,
+  previewPane,
   config,
   hasRecord,
   onSideWidthChange,
   onTerminalHeightChange,
+  onPreviewHeightChange,
   onResetSideWidth,
   onResetTerminalHeight,
+  onResetPreviewHeight,
 }: PaneLayoutProps) {
   const { t } = useI18n();
   const [isNarrow, setIsNarrow] = useState<boolean>(() =>
@@ -47,10 +55,15 @@ export function PaneLayout({
   const [narrowTab, setNarrowTab] = useState<NarrowTab>("chat");
 
   const [draggingCol, setDraggingCol] = useState(false);
-  const [draggingRow, setDraggingRow] = useState(false);
+  const [draggingRow, setDraggingRow] = useState<RowTarget | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const startDragPos = useRef<{ x: number; y: number; width: number; height: number }>({
+  const startDragPos = useRef<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>({
     x: 0,
     y: 0,
     width: config.sideWidth,
@@ -74,25 +87,26 @@ export function PaneLayout({
         x: event.clientX,
         y: event.clientY,
         width: config.sideWidth,
-        height: config.terminalHeight,
+        height: 0,
       };
     },
-    [config.sideWidth, config.terminalHeight],
+    [config.sideWidth],
   );
 
-  // Horizontal Resizer (Row drag for Terminal height)
+  // Horizontal Resizer (Row drag for Preview / Terminal height)
   const handleRowMouseDown = useCallback(
-    (event: React.MouseEvent) => {
+    (target: RowTarget) => (event: React.MouseEvent) => {
       event.preventDefault();
-      setDraggingRow(true);
+      setDraggingRow(target);
       startDragPos.current = {
         x: event.clientX,
         y: event.clientY,
-        width: config.sideWidth,
-        height: config.terminalHeight,
+        width: 0,
+        height:
+          target === "terminal" ? config.terminalHeight : config.previewHeight,
       };
     },
-    [config.sideWidth, config.terminalHeight],
+    [config.terminalHeight, config.previewHeight],
   );
 
   useEffect(() => {
@@ -109,18 +123,26 @@ export function PaneLayout({
           const deltaX = startDragPos.current.x - event.clientX;
           const nextWidth = clampSideWidth(startDragPos.current.width + deltaX);
           onSideWidthChange(nextWidth);
-        } else if (draggingRow) {
+        } else if (draggingRow === "terminal") {
           // Dragging up increases terminal height (since terminal is at the bottom)
           const deltaY = startDragPos.current.y - event.clientY;
-          const nextHeight = clampTerminalHeight(startDragPos.current.height + deltaY);
+          const nextHeight = clampTerminalHeight(
+            startDragPos.current.height + deltaY,
+          );
           onTerminalHeightChange(nextHeight);
+        } else if (draggingRow === "preview") {
+          const deltaY = startDragPos.current.y - event.clientY;
+          const nextHeight = clampPreviewHeight(
+            startDragPos.current.height + deltaY,
+          );
+          onPreviewHeightChange(nextHeight);
         }
       });
     }
 
     function handleMouseUp() {
       setDraggingCol(false);
-      setDraggingRow(false);
+      setDraggingRow(null);
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -134,10 +156,17 @@ export function PaneLayout({
       window.removeEventListener("mouseup", handleMouseUp);
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
     };
-  }, [draggingCol, draggingRow, onSideWidthChange, onTerminalHeightChange]);
+  }, [
+    draggingCol,
+    draggingRow,
+    onSideWidthChange,
+    onTerminalHeightChange,
+    onPreviewHeightChange,
+  ]);
 
   const showInspector = hasRecord && config.inspectorOpen && Boolean(inspectorPane);
   const showTerminal = hasRecord && config.terminalOpen && Boolean(terminalPane);
+  const showPreview = hasRecord && config.previewOpen && Boolean(previewPane);
 
   // If narrow viewport, render tab bar and single active pane
   if (isNarrow) {
@@ -165,6 +194,15 @@ export function PaneLayout({
             </button>
             <button
               type="button"
+              className={`pane-layout__tab ${narrowTab === "preview" ? "pane-layout__tab--active" : ""}`}
+              onClick={() => setNarrowTab("preview")}
+              role="tab"
+              aria-selected={narrowTab === "preview"}
+            >
+              {t("Preview")}
+            </button>
+            <button
+              type="button"
               className={`pane-layout__tab ${narrowTab === "terminal" ? "pane-layout__tab--active" : ""}`}
               onClick={() => setNarrowTab("terminal")}
               role="tab"
@@ -179,6 +217,8 @@ export function PaneLayout({
             chatPane
           ) : narrowTab === "inspector" ? (
             inspectorPane
+          ) : narrowTab === "preview" ? (
+            previewPane
           ) : (
             terminalPane
           )}
@@ -190,7 +230,9 @@ export function PaneLayout({
   return (
     <div
       ref={containerRef}
-      className={`pane-layout ${draggingCol || draggingRow ? "pane-layout--resizing" : ""}`}
+      className={`pane-layout ${
+        draggingCol || draggingRow ? "pane-layout--resizing" : ""
+      }`}
     >
       <div className="pane-layout__top-section">
         <div className="pane-layout__chat-pane">{chatPane}</div>
@@ -224,16 +266,44 @@ export function PaneLayout({
         ) : null}
       </div>
 
+      {showPreview ? (
+        <>
+          <div
+            className={`pane-resizer pane-resizer--row ${draggingRow === "preview" ? "pane-resizer--active" : ""}`}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label={t("Resize preview")}
+            aria-valuenow={config.previewHeight}
+            tabIndex={0}
+            onMouseDown={handleRowMouseDown("preview")}
+            onDoubleClick={() => onResetPreviewHeight?.() ?? onPreviewHeightChange(DEFAULT_PANE_LAYOUT.previewHeight)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowUp") {
+                onPreviewHeightChange(clampPreviewHeight(config.previewHeight + 10));
+              } else if (e.key === "ArrowDown") {
+                onPreviewHeightChange(clampPreviewHeight(config.previewHeight - 10));
+              }
+            }}
+          />
+          <div
+            className="pane-layout__bottom-pane"
+            style={{ height: `${config.previewHeight}px` }}
+          >
+            {previewPane}
+          </div>
+        </>
+      ) : null}
+
       {showTerminal ? (
         <>
           <div
-            className={`pane-resizer pane-resizer--row ${draggingRow ? "pane-resizer--active" : ""}`}
+            className={`pane-resizer pane-resizer--row ${draggingRow === "terminal" ? "pane-resizer--active" : ""}`}
             role="separator"
             aria-orientation="horizontal"
             aria-label={t("Resize terminal")}
             aria-valuenow={config.terminalHeight}
             tabIndex={0}
-            onMouseDown={handleRowMouseDown}
+            onMouseDown={handleRowMouseDown("terminal")}
             onDoubleClick={() => onResetTerminalHeight?.() ?? onTerminalHeightChange(DEFAULT_PANE_LAYOUT.terminalHeight)}
             onKeyDown={(e) => {
               if (e.key === "ArrowUp") {

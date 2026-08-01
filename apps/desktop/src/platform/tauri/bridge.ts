@@ -22,6 +22,8 @@ import type {
   PersistedTask,
   ProjectSummary,
   PersistedTaskDraft,
+  PreviewLogLine,
+  PreviewServerState,
   RepositoryInfo,
   TaskAttachment,
   TaskEventReplay,
@@ -46,6 +48,7 @@ const HOST_LIFECYCLE_EVENT = "agent-host-lifecycle";
 const HOST_LOG_EVENT = "agent-host-log";
 const TERMINAL_OUTPUT_EVENT = "terminal-output";
 const TERMINAL_EXIT_EVENT = "terminal-exit";
+const PREVIEW_LOG_EVENT = "preview-log";
 
 export async function invokeDesktopBootstrap(): Promise<DesktopBootstrap> {
   return invoke<DesktopBootstrap>("desktop_bootstrap");
@@ -216,6 +219,32 @@ export async function listenToUserTerminal(options: {
   return () => {
     for (const unlisten of unlisteners) unlisten();
   };
+}
+
+export async function startPreview(taskId: string): Promise<PreviewServerState> {
+  return invoke<PreviewServerState>("preview_start", { taskId });
+}
+
+export async function stopPreview(taskId: string): Promise<void> {
+  return invoke("preview_stop", { taskId });
+}
+
+export async function getPreviewStatus(
+  taskId: string,
+): Promise<PreviewServerState | null> {
+  return invoke<PreviewServerState | null>("preview_status", { taskId });
+}
+
+export async function listenToPreview(options: {
+  onLog: (line: PreviewLogLine) => void;
+}): Promise<UnlistenFn> {
+  return listen<PreviewLogLine>(PREVIEW_LOG_EVENT, (event) => {
+    options.onLog(event.payload);
+  });
+}
+
+export async function openPreviewInBrowser(url: string): Promise<void> {
+  return invoke("preview_open", { url });
 }
 
 export async function replayTaskEvents(

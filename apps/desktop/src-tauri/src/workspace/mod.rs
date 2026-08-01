@@ -379,7 +379,7 @@ fn append_editor_audit(
     Ok(())
 }
 
-pub(super) fn task_root(database_path: &Path, task_id: &str) -> Result<PathBuf, String> {
+pub fn task_root(database_path: &Path, task_id: &str) -> Result<PathBuf, String> {
     let task = TaskRepository::get(database_path, task_id)?
         .ok_or_else(|| format!("Unknown task: {task_id}"))?;
     if task.archived {

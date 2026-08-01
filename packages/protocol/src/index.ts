@@ -46,6 +46,8 @@ export type {
   HostToDesktopPayload,
   PiSessionEvent,
   PiAgentUpdateStatus,
+  PreviewLogLine,
+  PreviewServerState,
   ProjectSummary,
   PersistedTask,
   PersistedTaskDraft,

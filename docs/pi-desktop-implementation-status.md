@@ -114,6 +114,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 `workspace::apply` Rust 测试 9 项（单 Hunk 撤销保留其他 Hunk 与无关改动、Keep 重新应用、整文件回退到 HEAD、外部修改拒绝、Symlink/路径穿越/已归档拒绝、未跟踪删除与恢复、审计行写入）全部通过，Rust 全量测试 54/54；新增前端 `parseUnifiedDiff.test.ts` 与 `WorkspaceDiffReview.test.tsx`（Hunk 解析、点击 Revert 调用桥接、聚合视图只读）；`npm --prefix apps/desktop run test:unit`（24/24 通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo fmt --check`（通过）与 `git diff --check`（通过）。
 
+### V3 Preview / Dev Server v1 实施进度（2026-08-01）
+
+1. 新增 `preview.rs`：基于 `tiny_http` 的隔离本地静态服务，只绑定 `127.0.0.1` 随机端口，根目录为任务 cwd；请求路径百分号解码 + 归一化拒绝 `..`，canonicalize 后校验 `starts_with(root)` 拦截 Symlink 逃逸，目录自动回退 `index.html`，按扩展名推断 MIME；
+2. 每次请求经 Tauri `preview-log` 事件流式推送 `method/path/status/mime/bytes` 到 Console；服务启停写入 `audit_log`（`preview.server_start` / `preview.server_stop`）；
+3. 新增 `preview_start` / `preview_stop` / `preview_status` / `preview_open` 四个 Tauri Command（`preview_open` 只允许 `http://127.0.0.1:*` / `http://localhost:*` 前缀，防止作为任意 URL 开启器）；
+4. 复用 `workspace::task_root`（改为 `pub`）解析任务 root 并拒绝归档任务；`PreviewManager` 按 `TerminalManager` 模式作为 `tauri::State` 管理，窗口销毁时 `stop_all`；
+5. `tauri.conf.json` CSP 放宽：`frame-src` / `img-src` / `connect-src` 增加 `http://127.0.0.1:*`，使 iframe/图片/请求可达独立本地 Origin（仅回环地址，跨源 iframe 无法触达 Tauri IPC）；
+6. PaneLayout 新增 Preview 底部槽位：独立 `previewHeight`（160–600）行拖拽 resizer、窄屏（<760px）Tab 加入“预览”，`paneLayoutState` 向后兼容加载旧版 `localStorage` 布局；
+7. 新增 `PreviewPane` 组件：URL 地址栏、Open in browser、Start/Stop、沙箱 `<iframe sandbox="allow-scripts allow-same-origin allow-forms">` 渲染 HTML/PDF、`<img>` 渲染图片、可清空的 Console 日志视图。
+
+验证证据：新增 `preview` Rust 测试 9 项（HTML 服务、目录 index、`..` 逃逸拒绝、Symlink 逃逸 403、非 GET 405、MIME 推断、start 幂等与 stop 后重启、归档任务拒绝、启停审计行）全部通过，Rust 全量测试 78/78（1 项 live 忽略）；新增前端 `PreviewPane.test.tsx` 6 项与 PaneLayout/paneLayoutState 预览相关测试；`npm --prefix apps/desktop run test:unit`（16 文件 / 69 项通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo fmt --check`（通过）与 `git diff --check`（通过）。Dev Server 端口审批与子进程捕获留待 NEXT-W01 v2。
+
 ---
 
 ## 2. 当前运行架构
@@ -568,7 +580,7 @@ npm run desktop:dmg
 
 | ID | 工作 | 依赖 | 估算 | 验收 | 风险与回滚 |
 |---|---|---|---:|---|---|
-| NEXT-W01 | Preview/Dev Server | Pane、Broker | 7 人日 | HTML/Image/PDF、独立 Origin、Console、端口审批 | 静态 Preview 先行 |
+| NEXT-W01 | Preview/Dev Server | Pane、Broker | 7 人日 | ✅ HTML/Image/PDF 静态预览、独立本地 Origin、Console 日志；端口审批留待 v2 | 静态 Preview 先行 |
 | NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | 分叉点、恢复、Context 标记一致 | 只读 Tree Feature Flag |
 | NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | 顺序、取消、崩溃恢复、IME | 继续单轮发送 |
 | NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | Waiting/Done/Failed、Focus 抑制 | 设置总开关 |

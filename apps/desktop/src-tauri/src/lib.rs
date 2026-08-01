@@ -3,6 +3,7 @@ mod broker;
 mod git;
 mod marketplace;
 mod policy;
+mod preview;
 mod storage;
 mod terminal;
 mod updates;
@@ -16,6 +17,7 @@ use broker::service::BrokerService;
 use git::repository::{inspect_repository, RepositoryInfo};
 use git::worktree::{WorktreeInfo, WorktreeManager};
 use marketplace::{MarketplacePage, MarketplaceQuery};
+use preview::{open_in_browser, PreviewManager, PreviewServerState};
 use serde::Serialize;
 use serde_json::Value;
 use std::os::unix::fs::PermissionsExt;
@@ -226,6 +228,39 @@ fn workspace_diff_apply(
 #[tauri::command]
 fn git_repository_inspect(project_path: String) -> Result<RepositoryInfo, String> {
     inspect_repository(std::path::Path::new(&project_path))
+}
+
+#[tauri::command]
+fn preview_start(
+    app: tauri::AppHandle,
+    manager: tauri::State<'_, PreviewManager>,
+    task_id: String,
+) -> Result<PreviewServerState, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    manager.start(&app, &paths.database_file, &task_id)
+}
+
+#[tauri::command]
+fn preview_stop(
+    app: tauri::AppHandle,
+    manager: tauri::State<'_, PreviewManager>,
+    task_id: String,
+) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    manager.stop(&paths.database_file, &task_id)
+}
+
+#[tauri::command]
+fn preview_status(
+    manager: tauri::State<'_, PreviewManager>,
+    task_id: String,
+) -> Result<Option<PreviewServerState>, String> {
+    Ok(manager.status(&task_id))
+}
+
+#[tauri::command]
+fn preview_open(url: String) -> Result<(), String> {
+    open_in_browser(&url)
 }
 
 #[tauri::command]
@@ -892,6 +927,7 @@ pub fn run() {
         .manage(BrokerService::default())
         .manage(WorktreeManager::default())
         .manage(TerminalManager::default())
+        .manage(PreviewManager::default())
         .invoke_handler(tauri::generate_handler![
             desktop_bootstrap,
             pi_agent_update_status,
@@ -902,6 +938,10 @@ pub fn run() {
             agent_host_start,
             agent_host_send,
             agent_host_stop,
+            preview_start,
+            preview_stop,
+            preview_status,
+            preview_open,
             task_list,
             project_list,
             scratch_workspace_create,
@@ -955,6 +995,7 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 let _ = window.state::<AgentSupervisor>().stop();
                 let _ = window.state::<TerminalManager>().stop_all();
+                window.state::<PreviewManager>().stop_all();
             }
         })
         .run(tauri::generate_context!())

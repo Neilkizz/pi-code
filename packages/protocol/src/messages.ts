@@ -308,6 +308,22 @@ export interface TerminalExit {
   signal?: number;
 }
 
+export interface PreviewServerState {
+  taskId: string;
+  port: number;
+  url: string;
+  running: boolean;
+}
+
+export interface PreviewLogLine {
+  taskId: string;
+  method: string;
+  path: string;
+  status: number;
+  bytes: number;
+  mime: string;
+}
+
 export interface AgentHostLaunch {
   pid: number;
   runtime: "development-node" | "bundled-node" | "existing";

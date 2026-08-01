@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
+  clampPreviewHeight,
   clampSideWidth,
   clampTerminalHeight,
   DEFAULT_PANE_LAYOUT,
@@ -27,6 +28,12 @@ describe("paneLayoutState", () => {
     expect(clampTerminalHeight(600)).toBe(500);
   });
 
+  it("clamps preview height within bounds [160, 600]", () => {
+    expect(clampPreviewHeight(100)).toBe(160);
+    expect(clampPreviewHeight(260)).toBe(260);
+    expect(clampPreviewHeight(700)).toBe(600);
+  });
+
   it("loads default pane layout when localStorage is empty", () => {
     const loaded = loadSavedPaneLayout();
     expect(loaded).toEqual(DEFAULT_PANE_LAYOUT);
@@ -37,8 +44,10 @@ describe("paneLayoutState", () => {
       preset: "three-pane",
       inspectorOpen: true,
       terminalOpen: true,
+      previewOpen: true,
       sideWidth: 400,
       terminalHeight: 300,
+      previewHeight: 280,
     };
     savePaneLayout(config);
 
@@ -47,6 +56,22 @@ describe("paneLayoutState", () => {
 
     const loaded = loadSavedPaneLayout();
     expect(loaded).toEqual(config);
+  });
+
+  it("defaults missing preview fields when loading an older layout", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY_PANE_LAYOUT,
+      JSON.stringify({
+        preset: "chat-inspector",
+        inspectorOpen: true,
+        terminalOpen: false,
+        sideWidth: 360,
+        terminalHeight: 240,
+      }),
+    );
+    const loaded = loadSavedPaneLayout();
+    expect(loaded.previewOpen).toBe(false);
+    expect(loaded.previewHeight).toBe(DEFAULT_PANE_LAYOUT.previewHeight);
   });
 
   it("generates correct configuration for standard layout presets", () => {

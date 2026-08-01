@@ -17,6 +17,7 @@ import { Timeline } from "../timeline/Timeline";
 import { TaskTerminal } from "../terminal/TaskTerminal";
 import { WorkspaceInspector } from "../workspace/WorkspaceInspector";
 import { PaneLayout } from "../workspace/PaneLayout";
+import { PreviewPane } from "../preview/PreviewPane";
 import {
   usePaneLayoutState,
   type LayoutPreset,
@@ -110,8 +111,10 @@ export function SessionWorkspace({
     selectPreset,
     toggleInspector,
     toggleTerminal,
+    togglePreview,
     setSideWidth,
     setTerminalHeight,
+    setPreviewHeight,
     resetLayout,
   } = usePaneLayoutState();
 
@@ -200,6 +203,10 @@ export function SessionWorkspace({
     />
   ) : undefined;
 
+  const previewPane = record ? (
+    <PreviewPane taskId={record.id} onError={onError} />
+  ) : undefined;
+
   return (
     <section className="session-workspace">
       <header className="session-toolbar">
@@ -261,6 +268,19 @@ export function SessionWorkspace({
           {record ? (
             <button
               className={`review-button ${
+                config.previewOpen ? "review-button--active" : ""
+              }`}
+              type="button"
+              onClick={togglePreview}
+              aria-pressed={config.previewOpen}
+              title={t("Toggle preview pane")}
+            >
+              {t("Preview")}
+            </button>
+          ) : null}
+          {record ? (
+            <button
+              className={`review-button ${
                 config.inspectorOpen ? "review-button--active" : ""
               }`}
               type="button"
@@ -302,12 +322,15 @@ export function SessionWorkspace({
         chatPane={chatPane}
         inspectorPane={inspectorPane}
         terminalPane={terminalPane}
+        previewPane={previewPane}
         config={config}
         hasRecord={Boolean(record)}
         onSideWidthChange={setSideWidth}
         onTerminalHeightChange={setTerminalHeight}
+        onPreviewHeightChange={setPreviewHeight}
         onResetSideWidth={resetLayout}
         onResetTerminalHeight={resetLayout}
+        onResetPreviewHeight={resetLayout}
       />
     </section>
   );

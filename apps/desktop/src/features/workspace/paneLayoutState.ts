@@ -11,8 +11,10 @@ export interface PaneLayoutConfig {
   preset: LayoutPreset;
   inspectorOpen: boolean;
   terminalOpen: boolean;
+  previewOpen: boolean;
   sideWidth: number;
   terminalHeight: number;
+  previewHeight: number;
 }
 
 export const STORAGE_KEY_PANE_LAYOUT = "pi-desktop.pane-layout-v1";
@@ -21,14 +23,18 @@ export const DEFAULT_PANE_LAYOUT: PaneLayoutConfig = {
   preset: "chat-inspector",
   inspectorOpen: true,
   terminalOpen: false,
+  previewOpen: false,
   sideWidth: 360,
   terminalHeight: 240,
+  previewHeight: 260,
 };
 
 export const MIN_SIDE_WIDTH = 260;
 export const MAX_SIDE_WIDTH = 640;
 export const MIN_TERMINAL_HEIGHT = 140;
 export const MAX_TERMINAL_HEIGHT = 500;
+export const MIN_PREVIEW_HEIGHT = 160;
+export const MAX_PREVIEW_HEIGHT = 600;
 
 export function clampSideWidth(width: number): number {
   return Math.min(MAX_SIDE_WIDTH, Math.max(MIN_SIDE_WIDTH, Math.round(width)));
@@ -38,6 +44,13 @@ export function clampTerminalHeight(height: number): number {
   return Math.min(
     MAX_TERMINAL_HEIGHT,
     Math.max(MIN_TERMINAL_HEIGHT, Math.round(height)),
+  );
+}
+
+export function clampPreviewHeight(height: number): number {
+  return Math.min(
+    MAX_PREVIEW_HEIGHT,
+    Math.max(MIN_PREVIEW_HEIGHT, Math.round(height)),
   );
 }
 
@@ -59,8 +72,10 @@ export function loadSavedPaneLayout(): PaneLayoutConfig {
           : DEFAULT_PANE_LAYOUT.preset,
       inspectorOpen: typeof parsed.inspectorOpen === "boolean" ? parsed.inspectorOpen : DEFAULT_PANE_LAYOUT.inspectorOpen,
       terminalOpen: typeof parsed.terminalOpen === "boolean" ? parsed.terminalOpen : DEFAULT_PANE_LAYOUT.terminalOpen,
+      previewOpen: typeof parsed.previewOpen === "boolean" ? parsed.previewOpen : DEFAULT_PANE_LAYOUT.previewOpen,
       sideWidth: typeof parsed.sideWidth === "number" ? clampSideWidth(parsed.sideWidth) : DEFAULT_PANE_LAYOUT.sideWidth,
       terminalHeight: typeof parsed.terminalHeight === "number" ? clampTerminalHeight(parsed.terminalHeight) : DEFAULT_PANE_LAYOUT.terminalHeight,
+      previewHeight: typeof parsed.previewHeight === "number" ? clampPreviewHeight(parsed.previewHeight) : DEFAULT_PANE_LAYOUT.previewHeight,
     };
   } catch {
     return DEFAULT_PANE_LAYOUT;
@@ -139,6 +154,14 @@ export function usePaneLayoutState() {
     }));
   }, []);
 
+  const togglePreview = useCallback(() => {
+    setConfig((prev) => ({
+      ...prev,
+      preset: "custom",
+      previewOpen: !prev.previewOpen,
+    }));
+  }, []);
+
   const setSideWidth = useCallback((width: number) => {
     setConfig((prev) => {
       const clamped = clampSideWidth(width);
@@ -163,6 +186,18 @@ export function usePaneLayoutState() {
     });
   }, []);
 
+  const setPreviewHeight = useCallback((height: number) => {
+    setConfig((prev) => {
+      const clamped = clampPreviewHeight(height);
+      if (prev.previewHeight === clamped) return prev;
+      return {
+        ...prev,
+        preset: "custom",
+        previewHeight: clamped,
+      };
+    });
+  }, []);
+
   const resetLayout = useCallback(() => {
     setConfig(DEFAULT_PANE_LAYOUT);
   }, []);
@@ -172,8 +207,10 @@ export function usePaneLayoutState() {
     selectPreset,
     toggleInspector,
     toggleTerminal,
+    togglePreview,
     setSideWidth,
     setTerminalHeight,
+    setPreviewHeight,
     resetLayout,
   };
 }
