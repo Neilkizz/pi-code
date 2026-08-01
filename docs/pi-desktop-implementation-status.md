@@ -138,6 +138,8 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 host 纯函数测试 3 项（`toTranscriptMessages` 含摘要角色与 label、附件上下文剥离、`mapSessionTree` 树展开与 current 标记）全部通过，host 全量测试 22/22；新增前端 Timeline 标记测试 1 项与 `SessionTreeView.test.tsx` 4 项；`npm --prefix apps/desktop run test:unit`（17 文件 / 74 项通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。交互式 Fork/Compact/Steer 与 `pi_sessions` 表接线留待 v2。
 
+真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用（临时开启 `sessions.tree` 标志）后启动；AX 辅助功能树确认检查器出现第 5 个「会话树」Tab，点击后只读树递归渲染真实会话的全部条目（MODEL_CHANGE / THINKING_LEVEL_CHANGE / 各用户与助手消息），当前叶子路径条目全部带「当前」高亮；「刷新」按钮可用，worker 离线时刷新优雅降级（保留已加载树、清除加载态，不再弹错误横幅）。冒烟中发现并修复两个集成问题：(1) protocol 运行时校验器 `validation.ts` 的命令白名单未含 `task.getTree`（仅改了 TS 类型），导致 host 报 `Unknown message type: task.getTree`——已补 `case "task.getTree"` 并新增 `protocol.test.mjs` 回归测试（有效 UUID 通过、畸形 taskId 拒绝）；(2) `onRequestSessionTree` 失败时曾弹全局错误横幅——改为静默清除 `treeLoading` 保留已加载树。冒烟后恢复 `sessions.tree` 默认关闭并重建，交付应用与提交代码一致。
+
 ---
 
 ## 2. 当前运行架构

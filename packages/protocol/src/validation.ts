@@ -123,6 +123,7 @@ export function decodeDesktopToHostMessage(
       break;
     case "task.abort":
     case "task.close":
+    case "task.getTree":
       if (!uuidString(input.taskId)) {
         return invalid(`${input.type} requires a UUID taskId`, correlationId);
       }

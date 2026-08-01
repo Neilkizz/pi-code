@@ -1475,9 +1475,14 @@ export function App() {
           }
           onAbort={() => void abortTask()}
           onRequestSessionTree={(taskId) =>
-            void getSessionTree(taskId).catch((cause: unknown) =>
-              setError(errorMessage(cause)),
-            )
+            void getSessionTree(taskId).catch(() => {
+              // The worker may be offline (task not running); keep the last
+              // loaded tree and just clear the loading state.
+              updateTaskView(taskId, (current) => ({
+                ...current,
+                treeLoading: false,
+              }));
+            })
           }
           onError={setError}
         />

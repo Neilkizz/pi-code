@@ -52,6 +52,25 @@ test("rejects unknown versions and malformed payloads", () => {
   assert.equal(malformed.error.code, "INVALID_MESSAGE");
 });
 
+test("validates task.getTree and rejects malformed task ids", () => {
+  const valid = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.getTree",
+      taskId: "00000000-0000-4000-8000-000000000001",
+    }),
+  );
+  assert.equal(valid.ok, true);
+
+  const bad = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.getTree",
+      taskId: "not-a-uuid",
+    }),
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.error.code, "INVALID_MESSAGE");
+});
+
 test("host messages carry worker and sequence metadata", () => {
   const event = createHostMessage(
     {
