@@ -150,6 +150,8 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 Protocol 校验测试 2 项、host `task-run-controller` 测试 2 项（active 时无 behavior 仍抛、有则透传入队且不重置 active、`clearQueue`/`abort` 清队列）、前端 `queueState.test.ts` 3 项与 `composerState.test.ts` 跟进模式 1 项；host 全量测试 24/24、`npm --prefix apps/desktop run test:unit`（18 文件 / 80 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 全部通过。steer 打断入口与同名文本去重边界留待后续。
 
+真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用后启动并打开已有任务；AX 设置 Composer textarea 值并回车发送一个长分析 prompt，任务进入「运行中」；随后 Composer 切换为跟进模式（「发送跟进」+「停止 Pi」双按钮）；再发送一条跟进后，AX 树确认「跟进已排队」活动与队列徽标「1 条跟进待处理」，跟进消息不进入 Timeline（正确等待当前回合）；点击徽标展开弹层显示跟进内容，点「取消全部」后徽标消失（host `session.clearQueue()` + `queue_update` 生效）；再次排队一条跟进后按「停止 Pi」，任务回到「空闲」、徽标同时清空（Stop 顺带清队列）、Composer 恢复普通「发送提示词」。冒烟期间因该任务 worktree 的 read 工具权限失败，首轮未完成，跟进「按序投递」（当前回合结束后的 message_start 追加）由 SDK 队列排空逻辑与单元测试覆盖。冒烟后退出应用，交付环境干净。
+
 ---
 
 ## 2. 当前运行架构
