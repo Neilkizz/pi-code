@@ -92,6 +92,61 @@ test("forwards verified image payloads through prompt options", async () => {
   ]);
 });
 
+test("queues a follow-up while active and rejects a plain duplicate", async () => {
+  const prompt = deferred();
+  const calls = [];
+  const statuses = [];
+  const controller = new TaskRunController(
+    {
+      prompt: async (text, options) => {
+        calls.push({ text, options });
+        return prompt.promise;
+      },
+      abort: async () => undefined,
+      clearQueue: () => ({ steering: [], followUp: [] }),
+    },
+    (status) => statuses.push(status),
+    () => undefined,
+  );
+
+  assert.deepEqual(controller.start("first"), { accepted: true });
+  assert.throws(() => controller.start("second"), /already running/);
+  assert.deepEqual(controller.start("follow", [], "followUp"), {
+    accepted: true,
+    queued: true,
+  });
+  assert.equal(controller.isActive, true);
+  assert.deepEqual(calls.map((entry) => entry.text), ["first", "follow"]);
+  assert.equal(calls[1].options.streamingBehavior, "followUp");
+  assert.deepEqual(statuses, ["running"]);
+
+  prompt.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(controller.isActive, false);
+});
+
+test("clearQueue and abort both drop pending prompts", async () => {
+  let clearCalls = 0;
+  const controller = new TaskRunController(
+    {
+      prompt: async () => undefined,
+      abort: async () => undefined,
+      clearQueue: () => {
+        clearCalls += 1;
+        return { steering: [], followUp: [] };
+      },
+    },
+    () => undefined,
+    () => undefined,
+  );
+
+  controller.start("work");
+  await controller.clearQueue();
+  assert.equal(clearCalls, 1);
+  await controller.abort();
+  assert.equal(clearCalls, 2);
+});
+
 function deferred() {
   let resolve;
   let reject;

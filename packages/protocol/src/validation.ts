@@ -116,7 +116,10 @@ export function decodeDesktopToHostMessage(
         !uuidString(input.taskId) ||
         !nonEmptyString(input.prompt) ||
         !Array.isArray(input.attachments) ||
-        !input.attachments.every(isTaskPromptAttachment)
+        !input.attachments.every(isTaskPromptAttachment) ||
+        (input.streamingBehavior !== undefined &&
+          input.streamingBehavior !== "steer" &&
+          input.streamingBehavior !== "followUp")
       ) {
         return invalid("task.prompt payload is invalid", correlationId);
       }
@@ -124,6 +127,7 @@ export function decodeDesktopToHostMessage(
     case "task.abort":
     case "task.close":
     case "task.getTree":
+    case "task.promptQueueClear":
       if (!uuidString(input.taskId)) {
         return invalid(`${input.type} requires a UUID taskId`, correlationId);
       }

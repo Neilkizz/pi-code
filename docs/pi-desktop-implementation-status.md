@@ -140,6 +140,16 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用（临时开启 `sessions.tree` 标志）后启动；AX 辅助功能树确认检查器出现第 5 个「会话树」Tab，点击后只读树递归渲染真实会话的全部条目（MODEL_CHANGE / THINKING_LEVEL_CHANGE / 各用户与助手消息），当前叶子路径条目全部带「当前」高亮；「刷新」按钮可用，worker 离线时刷新优雅降级（保留已加载树、清除加载态，不再弹错误横幅）。冒烟中发现并修复两个集成问题：(1) protocol 运行时校验器 `validation.ts` 的命令白名单未含 `task.getTree`（仅改了 TS 类型），导致 host 报 `Unknown message type: task.getTree`——已补 `case "task.getTree"` 并新增 `protocol.test.mjs` 回归测试（有效 UUID 通过、畸形 taskId 拒绝）；(2) `onRequestSessionTree` 失败时曾弹全局错误横幅——改为静默清除 `treeLoading` 保留已加载树。冒烟后恢复 `sessions.tree` 默认关闭并重建，交付应用与提交代码一致。
 
+### V3 Steer / Follow-up Queue 实施进度（2026-08-01）
+
+1. 确认 Pi-Agent SDK 已内置完整跟进队列：`AgentSession.prompt(text, { streamingBehavior: "steer"|"followUp" })` 在运行中会入队（`_queueSteer`/`_queueFollowUp`）并发 `queue_update` 事件，`clearQueue()` 可用；但 Host 的 `TaskRunController.start()` 在 active 时硬抛 `"Task is already running"`，协议 `task.prompt` 无该字段。本轮为控制器+协议+前端接线，不改 SDK；
+2. Protocol：`task.prompt` 加可选 `streamingBehavior?: "steer" | "followUp"`；新增 `task.promptQueueClear` 命令；`validation.ts` 校验 `streamingBehavior` 并补白名单（沿用 `task.getTree` 的教训），`protocol.test.mjs` 加回归；
+3. Host（`task-run-controller.ts`）：`PromptSession` 加 `clearQueue` 与 `streamingBehavior`；`start()` 在 active 时无 `streamingBehavior` 仍抛（回退），有则透传 SDK 入队（返回 `{ accepted: true, queued: true }`，不触碰 active/generation/status）；`clearQueue()` 与 `abort()` 顺带清队列；`desktop-host.ts` 的 `startPromptTask` 透传 `streamingBehavior`，dispatch 加 `task.promptQueueClear`；
+4. 前端：`TaskViewState.queuedPrompts`；`submitFollowUp` 运行中发 `task.prompt { streamingBehavior: "followUp" }` 并入本地队列（不加乐观消息）；`consumePiEvent` 处理 `message_start`（user，去重后追加到 Timeline，顺带修复冷启动重放缺用户气泡）与 `queue_update`（按文本匹配保留未投递项）；Composer 运行中显示「发送跟进」+ Stop 双按钮、队列徽标（数量 + 展开列表 + 「取消全部」）；IME 增加 `compositionstart/end` 跟踪；
+5. 崩溃恢复：`queuedPrompts` 持久化到 `pi-desktop.pending-prompt.<taskId>`；`activateRecord` 读取回显徽标；resume（`task.history`）后对未投递项重提 `task.prompt { streamingBehavior: "followUp" }`（尽力而为，`queue_update` 去重）。
+
+验证证据：新增 Protocol 校验测试 2 项、host `task-run-controller` 测试 2 项（active 时无 behavior 仍抛、有则透传入队且不重置 active、`clearQueue`/`abort` 清队列）、前端 `queueState.test.ts` 3 项与 `composerState.test.ts` 跟进模式 1 项；host 全量测试 24/24、`npm --prefix apps/desktop run test:unit`（18 文件 / 80 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、`cargo test`（78 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 全部通过。steer 打断入口与同名文本去重边界留待后续。
+
 ---
 
 ## 2. 当前运行架构
@@ -596,7 +606,7 @@ npm run desktop:dmg
 |---|---|---|---:|---|---|
 | NEXT-W01 | Preview/Dev Server | Pane、Broker | 7 人日 | ✅ HTML/Image/PDF 静态预览、独立本地 Origin、Console 日志；端口审批留待 v2 | 静态 Preview 先行 |
 | NEXT-W02 | Session Tree/Fork/Compaction | Pi Session Contract | 6 人日 | ✅ 只读会话树、压缩/分支标记、当前叶子高亮；交互式 Fork/Compact 留待 v2 | 只读 Tree Feature Flag |
-| NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | 顺序、取消、崩溃恢复、IME | 继续单轮发送 |
+| NEXT-W03 | Steer/Follow-up Queue | Pi Host | 4 人日 | ✅ 运行中跟进排队、顺序、取消全部、队列持久化+恢复重提、IME | 继续单轮发送 |
 | NEXT-W04 | Notification + Dock Badge | Tauri Plugin | 3 人日 | Waiting/Done/Failed、Focus 抑制 | 设置总开关 |
 | NEXT-W05 | Quick Entry + Screenshot | W03、Attachment | 7 人日 | 全局快捷键、150 ms、权限拒绝降级 | 普通主窗口入口保留 |
 

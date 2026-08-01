@@ -71,6 +71,47 @@ test("validates task.getTree and rejects malformed task ids", () => {
   assert.equal(bad.error.code, "INVALID_MESSAGE");
 });
 
+test("validates task.prompt streamingBehavior and promptQueueClear", () => {
+  const followUp = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.prompt",
+      taskId: "00000000-0000-4000-8000-000000000001",
+      prompt: "go on",
+      attachments: [],
+      streamingBehavior: "followUp",
+    }),
+  );
+  assert.equal(followUp.ok, true);
+
+  const badBehavior = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.prompt",
+      taskId: "00000000-0000-4000-8000-000000000001",
+      prompt: "go on",
+      attachments: [],
+      streamingBehavior: "sideways",
+    }),
+  );
+  assert.equal(badBehavior.ok, false);
+  assert.equal(badBehavior.error.code, "INVALID_MESSAGE");
+
+  const clear = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.promptQueueClear",
+      taskId: "00000000-0000-4000-8000-000000000001",
+    }),
+  );
+  assert.equal(clear.ok, true);
+
+  const clearBad = decodeDesktopToHostMessage(
+    createDesktopCommand({
+      type: "task.promptQueueClear",
+      taskId: "not-a-uuid",
+    }),
+  );
+  assert.equal(clearBad.ok, false);
+});
+
 test("host messages carry worker and sequence metadata", () => {
   const event = createHostMessage(
     {

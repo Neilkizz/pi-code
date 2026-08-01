@@ -11,6 +11,7 @@ const baseView: TaskViewState = {
   restored: false,
   activities: [],
   treeLoading: false,
+  queuedPrompts: [],
   messages: [
     { id: "user-1", role: "user", text: "Inspect this project" },
     { id: "assistant-1", role: "assistant", text: "I am checking it." },

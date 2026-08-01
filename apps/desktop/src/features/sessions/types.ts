@@ -13,6 +13,13 @@ export interface ActivityItem {
   completedAt?: number;
 }
 
+export interface QueuedPrompt {
+  id: string;
+  text: string;
+  mode: "followUp" | "steer";
+  createdAt: number;
+}
+
 export interface TaskViewState {
   messages: TaskTranscriptMessage[];
   streamingAssistantId?: string;
@@ -21,6 +28,8 @@ export interface TaskViewState {
   /** Read-only session tree (from task.getTree). Null = not loaded. */
   tree?: SessionTree | null;
   treeLoading: boolean;
+  /** Follow-ups/steers submitted while the agent was running and not yet delivered. */
+  queuedPrompts: QueuedPrompt[];
 }
 
 export const EMPTY_TASK_VIEW: TaskViewState = {
@@ -29,4 +38,5 @@ export const EMPTY_TASK_VIEW: TaskViewState = {
   restored: false,
   tree: null,
   treeLoading: false,
+  queuedPrompts: [],
 };

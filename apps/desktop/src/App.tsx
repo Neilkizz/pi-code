@@ -61,8 +61,13 @@ import { compactJson } from "./features/sessions/presentation";
 import {
   EMPTY_TASK_VIEW,
   type ActivityItem,
+  type QueuedPrompt,
   type TaskViewState,
 } from "./features/sessions/types";
+import {
+  reconcileQueuedPrompts,
+  userTextMatches,
+} from "./features/sessions/queueState";
 
 const emptySnapshot: DesktopShellSnapshot = {
   status: "booting",
@@ -74,6 +79,7 @@ const emptySnapshot: DesktopShellSnapshot = {
 };
 
 const promptDraftStoragePrefix = "pi-desktop.prompt-draft.";
+const pendingPromptStoragePrefix = "pi-desktop.pending-prompt.";
 const hostCommandTimeoutMs = 45_000;
 
 interface PendingHostCommand {
@@ -165,6 +171,14 @@ export function App() {
   useEffect(() => {
     persistPromptDraft(activeTaskId, prompt);
   }, [activeTaskId, prompt]);
+
+  useEffect(() => {
+    if (!activeTaskId) return;
+    writePendingPrompts(
+      activeTaskId,
+      taskViews[activeTaskId]?.queuedPrompts ?? [],
+    );
+  }, [activeTaskId, taskViews]);
 
   const commandActions = useMemo<CommandPaletteAction[]>(
     () => [
@@ -557,6 +571,7 @@ export function App() {
             ? message.messages
             : current.messages,
       }));
+      replayQueuedPrompts(message.taskId);
       if (isFeatureEnabled("sessions.tree")) {
         updateTaskView(message.taskId, (current) => ({
           ...current,
@@ -743,6 +758,51 @@ export function App() {
       return;
     }
 
+    if (event.type === "message_start") {
+      const message = isRecord(event.message) ? event.message : undefined;
+      if (message && message.role === "user") {
+        const text = messageText(message.content).trim();
+        if (text) {
+          const id =
+            typeof message.id === "string" ? message.id : `user-${messageId()}`;
+          updateTaskView(taskId, (current) => {
+            const duplicate = current.messages.some(
+              (existing) =>
+                existing.role === "user" &&
+                userTextMatches(existing.text, text),
+            );
+            if (duplicate) return current;
+            return {
+              ...current,
+              messages: [
+                ...current.messages,
+                { id, role: "user", text, createdAt: Date.now() },
+              ],
+            };
+          });
+        }
+      }
+      return;
+    }
+
+    if (event.type === "queue_update") {
+      const steering = Array.isArray(event.steering)
+        ? event.steering.map(String)
+        : [];
+      const followUp = Array.isArray(event.followUp)
+        ? event.followUp.map(String)
+        : [];
+      updateTaskView(taskId, (current) => ({
+        ...current,
+        queuedPrompts: reconcileQueuedPrompts(
+          current.queuedPrompts,
+          steering,
+          followUp,
+        ),
+      }));
+      return;
+    }
+
     if (event.type === "tool_execution_start") {
       const toolName = String(event.toolName ?? t("unknown"));
       pushActivity(
@@ -890,6 +950,7 @@ export function App() {
       [record.id]: current[record.id] ?? {
         ...EMPTY_TASK_VIEW,
         restored,
+        queuedPrompts: readPendingPrompts(record.id),
       },
     }));
   }
@@ -1083,6 +1144,14 @@ export function App() {
     );
   }
 
+  async function submitFollowUp(): Promise<void> {
+    const typedText = prompt.trim();
+    if (!typedText || !activeTaskId) {
+      return;
+    }
+    await submitFollowUpForTask(activeTaskId, typedText);
+  }
+
   async function runExclusiveSubmission(
     work: () => Promise<void>,
   ): Promise<void> {
@@ -1179,6 +1248,68 @@ export function App() {
       ...current,
       [taskId]: [],
     }));
+  }
+
+  async function submitFollowUpForTask(
+    taskId: string,
+    text: string,
+    mode: "followUp" | "steer" = "followUp",
+  ): Promise<void> {
+    setError(null);
+    const queued: QueuedPrompt = {
+      id: messageId(),
+      text,
+      mode,
+      createdAt: Date.now(),
+    };
+    updateTaskView(taskId, (current) => ({
+      ...current,
+      queuedPrompts: [...current.queuedPrompts, queued],
+    }));
+    setPrompt("");
+    clearPromptDraft(taskId);
+    const delivered = await send({
+      type: "task.prompt",
+      taskId,
+      prompt: text,
+      attachments: [],
+      streamingBehavior: mode,
+    });
+    if (!delivered) {
+      updateTaskView(taskId, (current) => ({
+        ...current,
+        queuedPrompts: current.queuedPrompts.filter(
+          (pending) => pending.id !== queued.id,
+        ),
+      }));
+      persistPromptDraft(taskId, text);
+      if (activeTaskIdRef.current === taskId) {
+        setPrompt((current) => current || text);
+      }
+      pushActivity(taskId, "error", t("Follow-up was not queued"), text);
+      return;
+    }
+    pushActivity(taskId, "system", t("Follow-up queued"), text);
+  }
+
+  async function clearPromptQueue(taskId: string): Promise<void> {
+    updateTaskView(taskId, (current) => ({
+      ...current,
+      queuedPrompts: [],
+    }));
+    await send({ type: "task.promptQueueClear", taskId });
+  }
+
+  function replayQueuedPrompts(taskId: string): void {
+    for (const pending of readPendingPrompts(taskId)) {
+      void send({
+        type: "task.prompt",
+        taskId,
+        prompt: pending.text,
+        attachments: [],
+        streamingBehavior: pending.mode,
+      }).catch(() => undefined);
+    }
   }
 
   async function attachFiles(): Promise<void> {
@@ -1471,9 +1602,17 @@ export function App() {
           onPermissionMode={setPermissionMode}
           onIsolation={selectIsolation}
           onSubmit={() =>
-            void (activeRecord ? submitPrompt() : createTask(true))
+            void (activeRecord
+              ? taskRunning
+                ? submitFollowUp()
+                : submitPrompt()
+              : createTask(true))
           }
           onAbort={() => void abortTask()}
+          queuedPrompts={activeTaskView.queuedPrompts}
+          onClearQueue={() => {
+            if (activeTaskId) void clearPromptQueue(activeTaskId);
+          }}
           onRequestSessionTree={(taskId) =>
             void getSessionTree(taskId).catch(() => {
               // The worker may be offline (task not running); keep the last
@@ -1529,6 +1668,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function messageText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => (isRecord(part) && typeof part.text === "string" ? part.text : ""))
+    .join("\n");
+}
+
 function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
@@ -1563,5 +1710,40 @@ function clearPromptDraft(taskId: string | null): void {
     window.localStorage.removeItem(promptDraftKey(taskId));
   } catch {
     // Draft persistence is best-effort and must never block task lifecycle.
+  }
+}
+
+function pendingPromptKey(taskId: string): string {
+  return `${pendingPromptStoragePrefix}${taskId}`;
+}
+
+function readPendingPrompts(taskId: string): QueuedPrompt[] {
+  try {
+    const raw = window.localStorage.getItem(pendingPromptKey(taskId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as QueuedPrompt[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item) =>
+        isRecord(item) &&
+        typeof item.id === "string" &&
+        typeof item.text === "string" &&
+        (item.mode === "followUp" || item.mode === "steer"),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writePendingPrompts(taskId: string, prompts: QueuedPrompt[]): void {
+  try {
+    const key = pendingPromptKey(taskId);
+    if (prompts.length > 0) {
+      window.localStorage.setItem(key, JSON.stringify(prompts));
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Queue persistence is best-effort and must never block task lifecycle.
   }
 }

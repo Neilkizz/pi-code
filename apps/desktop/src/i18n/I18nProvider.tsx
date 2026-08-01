@@ -180,6 +180,12 @@ const zhCN: Record<string, string> = {
   "Auto · unavailable": "自动 · 暂不可用",
   "Stop Pi": "停止 Pi",
   "Send prompt": "发送提示词",
+  "Send follow-up": "发送跟进",
+  "Follow-up queued": "跟进已排队",
+  "Follow-up was not queued": "跟进排队失败",
+  pending: "待发",
+  "Cancel all": "取消全部",
+  "{count} follow-ups pending": "{count} 条跟进待处理",
   "Select a project folder before sending": "发送前请选择项目文件夹",
   "Wait for the repository check to finish": "请等待仓库检查完成",
   "A Git repository is required for an isolated worktree":

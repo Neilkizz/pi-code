@@ -176,11 +176,16 @@ export class DesktopHost {
               message.taskId,
               message.prompt,
               message.attachments,
+              message.streamingBehavior,
             )
           : this.requireTaskWorker(message.taskId).request(message);
       case "task.abort":
         return this.sessionWorker
           ? this.abortTask(message.taskId)
+          : this.requireTaskWorker(message.taskId).request(message);
+      case "task.promptQueueClear":
+        return this.sessionWorker
+          ? this.clearPromptQueue(message.taskId)
           : this.requireTaskWorker(message.taskId).request(message);
       case "task.getTree":
         return this.sessionWorker
@@ -707,6 +712,7 @@ export class DesktopHost {
     taskId: string,
     prompt: string,
     attachments: TaskPromptAttachment[],
+    streamingBehavior?: "steer" | "followUp",
   ): Promise<{ accepted: true }> {
     const runtime = this.requireTask(taskId);
     const prepared = await this.preparePromptAttachments(
@@ -722,7 +728,13 @@ export class DesktopHost {
     return runtime.runController.start(
       text,
       supportsImages ? prepared.images : [],
+      streamingBehavior,
     );
+  }
+
+  private clearPromptQueue(taskId: string): Promise<void> {
+    const runtime = this.requireTask(taskId);
+    return runtime.runController.clearQueue();
   }
 
   private async preparePromptAttachments(

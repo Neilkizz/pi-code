@@ -9,6 +9,7 @@ import type {
 import { useEffect, useRef, useState } from "react";
 import { NavIcon } from "../../design-system/NavIcon";
 import { useI18n } from "../../i18n/I18nProvider";
+import type { QueuedPrompt } from "../sessions/types";
 import { deriveComposerState } from "./composerState";
 import { MentionsAutocomplete, type MentionCandidate } from "./MentionsAutocomplete";
 
@@ -40,6 +41,7 @@ export interface ComposerProps {
   taskRunning?: boolean;
   isRunning?: boolean;
   isSubmitting?: boolean;
+  queuedPrompts?: QueuedPrompt[];
   candidates?: MentionCandidate[];
   onCwdChange?: (cwd: string) => void;
   onPromptChange?: (prompt: string) => void;
@@ -54,6 +56,7 @@ export interface ComposerProps {
   onIsolation?: (isolation: TaskIsolation) => void;
   onSubmit?: () => void;
   onAbort?: () => void;
+  onClearQueue?: () => void;
 }
 
 export function Composer({
@@ -76,6 +79,7 @@ export function Composer({
   taskRunning = false,
   isRunning,
   isSubmitting = false,
+  queuedPrompts = [],
   candidates = DEFAULT_CANDIDATES,
   onCwdChange,
   onPromptChange,
@@ -90,9 +94,12 @@ export function Composer({
   onIsolation,
   onSubmit,
   onAbort,
+  onClearQueue,
 }: ComposerProps) {
   const { t } = useI18n();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const composingRef = useRef(false);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   const actualPrompt = prompt ?? draft ?? "";
   const actualHostReady = isHostConnected ?? hostReady;
@@ -241,6 +248,12 @@ export function Composer({
             handlePromptChange(event.target.value);
             updateMentionState(event.target.value, event.target.selectionStart);
           }}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={() => {
+            composingRef.current = false;
+          }}
           onKeyUp={(event) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
               updateMentionState(actualPrompt, (event.target as HTMLTextAreaElement).selectionStart);
@@ -283,7 +296,8 @@ export function Composer({
             if (
               event.key === "Enter" &&
               !event.shiftKey &&
-              !event.nativeEvent.isComposing
+              !event.nativeEvent.isComposing &&
+              !composingRef.current
             ) {
               if (composerState.canSubmit && onSubmit) {
                 event.preventDefault();
@@ -370,14 +384,27 @@ export function Composer({
             ) : null}
           </div>
           {actualTaskRunning ? (
-            <button
-              className="composer__send composer__send--stop"
-              type="button"
-              onClick={onAbort}
-              aria-label={t("Stop Pi")}
-            >
-              ■
-            </button>
+            <>
+              <button
+                className="composer__send"
+                type="button"
+                onClick={onSubmit}
+                disabled={!composerState.canSubmit}
+                aria-label={t("Send follow-up")}
+                aria-busy={isSubmitting}
+                title={t("Send follow-up")}
+              >
+                ↑
+              </button>
+              <button
+                className="composer__send composer__send--stop"
+                type="button"
+                onClick={onAbort}
+                aria-label={t("Stop Pi")}
+              >
+                ■
+              </button>
+            </>
           ) : (
             <button
               className="composer__send"
@@ -391,6 +418,40 @@ export function Composer({
               ↑
             </button>
           )}
+          {hasTask && queuedPrompts.length > 0 ? (
+            <div className="composer__queue">
+              <button
+                className="composer__queue-badge"
+                type="button"
+                onClick={() => setQueueOpen((current) => !current)}
+                aria-expanded={queueOpen}
+                aria-label={t("{count} follow-ups pending", {
+                  count: queuedPrompts.length,
+                })}
+              >
+                {queuedPrompts.length}
+                <span>{t("pending")}</span>
+              </button>
+              {queueOpen ? (
+                <div className="composer__queue-popover">
+                  <div className="composer__queue-list">
+                    {queuedPrompts.map((queued) => (
+                      <div className="composer__queue-item" key={queued.id}>
+                        {queued.text}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    className="composer__queue-clear"
+                    type="button"
+                    onClick={onClearQueue}
+                  >
+                    {t("Cancel all")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 

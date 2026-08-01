@@ -577,10 +577,13 @@ export type DesktopToHostPayload =
       taskId: string;
       prompt: string;
       attachments: TaskPromptAttachment[];
+      /** How to queue this prompt when the agent is already processing. */
+      streamingBehavior?: "steer" | "followUp";
     }
   | { type: "task.abort"; taskId: string }
   | { type: "task.close"; taskId: string }
   | { type: "task.getTree"; taskId: string }
+  | { type: "task.promptQueueClear"; taskId: string }
   | {
       type: "task.permission.respond";
       taskId: string;

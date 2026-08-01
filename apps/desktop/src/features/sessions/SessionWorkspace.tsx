@@ -24,7 +24,7 @@ import {
 } from "../workspace/paneLayoutState";
 import { useI18n } from "../../i18n/I18nProvider";
 import { compactPath, permissionModeLabel } from "./presentation";
-import type { TaskViewState } from "./types";
+import type { QueuedPrompt, TaskViewState } from "./types";
 
 interface SessionWorkspaceProps {
   record?: PersistedTask;
@@ -48,6 +48,8 @@ interface SessionWorkspaceProps {
   isSubmitting: boolean;
   taskLoading: boolean;
   archiveConfirm: boolean;
+  queuedPrompts?: QueuedPrompt[];
+  onClearQueue?: () => void;
   onArchive: () => void;
   onArchiveBlur: () => void;
   onPermission: (request: TaskPermissionRequest, approved: boolean) => void;
@@ -89,6 +91,8 @@ export function SessionWorkspace({
   isSubmitting,
   taskLoading,
   archiveConfirm,
+  queuedPrompts = [],
+  onClearQueue,
   onArchive,
   onArchiveBlur,
   onPermission,
@@ -184,6 +188,8 @@ export function SessionWorkspace({
         onIsolation={onIsolation}
         onSubmit={onSubmit}
         onAbort={onAbort}
+        queuedPrompts={queuedPrompts}
+        onClearQueue={onClearQueue}
       />
     </div>
   );

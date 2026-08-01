@@ -27,6 +27,12 @@ describe("deriveComposerState", () => {
     expect(state.blockReason).toBe("submitting");
   });
 
+  it("allows sending a follow-up while the agent is running", () => {
+    const state = deriveComposerState({ ...base, taskRunning: true });
+    expect(state.canSubmit).toBe(true);
+    expect(state.blockReason).toBeUndefined();
+  });
+
   it("requires a git project for a new isolated task", () => {
     const state = deriveComposerState({ ...base, hasTask: false, repositoryInfo: null });
     expect(state.canSubmit).toBe(false);

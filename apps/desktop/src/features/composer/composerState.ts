@@ -53,14 +53,19 @@ export function deriveComposerState(input: ComposerStateInput): ComposerState {
     return { hasContent, canCreateTask, canSubmit: false, blockReason: "content-required" };
   }
   if (input.hasTask) {
-    return input.taskConnected && !input.taskRunning
-      ? { hasContent, canCreateTask, canSubmit: true }
-      : {
-          hasContent,
-          canCreateTask,
-          canSubmit: false,
-          blockReason: input.taskRunning ? "submitting" : "task-restoring",
-        };
+    if (!input.taskConnected) {
+      return {
+        hasContent,
+        canCreateTask,
+        canSubmit: false,
+        blockReason: "task-restoring",
+      };
+    }
+    if (input.taskRunning) {
+      // Follow-up mode: the send button queues a follow-up while the agent works.
+      return { hasContent, canCreateTask, canSubmit: true };
+    }
+    return { hasContent, canCreateTask, canSubmit: true };
   }
   if (!input.cwd.trim()) {
     return { hasContent, canCreateTask, canSubmit: false, blockReason: "project-required" };

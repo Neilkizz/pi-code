@@ -4,12 +4,18 @@ export interface PromptImage {
   mimeType: string;
 }
 
+export type PromptStreamingBehavior = "steer" | "followUp";
+
 export interface PromptSession {
   prompt(
     prompt: string,
-    options?: { images?: PromptImage[] },
+    options?: {
+      images?: PromptImage[];
+      streamingBehavior?: PromptStreamingBehavior;
+    },
   ): Promise<void>;
   abort(): Promise<void>;
+  clearQueue?(): { steering: string[]; followUp: string[] };
 }
 
 type TaskRunStatus = "idle" | "running" | "completed" | "failed";
@@ -25,9 +31,24 @@ export class TaskRunController {
     private readonly onAbortPending: () => void,
   ) {}
 
-  start(prompt: string, images: PromptImage[] = []): { accepted: true } {
+  start(
+    prompt: string,
+    images: PromptImage[] = [],
+    streamingBehavior?: PromptStreamingBehavior,
+  ): { accepted: true; queued?: boolean } {
     if (this.active) {
-      throw new Error("Task is already running");
+      if (!streamingBehavior) {
+        throw new Error("Task is already running");
+      }
+      // The SDK already has a run in progress; queue this as a steer/follow-up.
+      // The SDK returns immediately once the message is enqueued.
+      void this.session.prompt(
+        prompt,
+        images.length > 0
+          ? { images, streamingBehavior }
+          : { streamingBehavior },
+      );
+      return { accepted: true, queued: true };
     }
 
     this.active = true;
@@ -37,11 +58,18 @@ export class TaskRunController {
     return { accepted: true };
   }
 
+  async clearQueue(): Promise<void> {
+    if (this.session.clearQueue) {
+      this.session.clearQueue();
+    }
+  }
+
   async abort(): Promise<void> {
     const wasActive = this.active;
     this.generation += 1;
     this.active = false;
     this.onAbortPending();
+    await this.clearQueue();
     if (wasActive) {
       await this.session.abort();
     }
