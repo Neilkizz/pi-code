@@ -126,6 +126,8 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 `preview` Rust 测试 9 项（HTML 服务、目录 index、`..` 逃逸拒绝、Symlink 逃逸 403、非 GET 405、MIME 推断、start 幂等与 stop 后重启、归档任务拒绝、启停审计行）全部通过，Rust 全量测试 78/78（1 项 live 忽略）；新增前端 `PreviewPane.test.tsx` 6 项与 PaneLayout/paneLayoutState 预览相关测试；`npm --prefix apps/desktop run test:unit`（16 文件 / 69 项通过）、`npm --prefix apps/desktop run build`（通过）、`npm run typecheck`（通过）、`cargo fmt --check`（通过）与 `git diff --check`（通过）。Dev Server 端口审批与子进程捕获留待 NEXT-W01 v2。
 
+真实 `.app` GUI smoke（2026-08-01）：重建并 ad-hoc 签名 Release 应用，种子一个指向含 `index.html`（内联 `<img src="photo.png">`）与 `doc.pdf` 的临时工作区任务后启动；AX 辅助功能树点击工具栏 Preview 复选框打开底部预览面板 → 点击「启动预览」后地址栏显示 `http://127.0.0.1:63517`，截图确认 iframe 实际渲染「Hello Preview」标题与红色 64px 图片（CSP `frame-src`/`img-src` 放行生效）；预览 Console 逐行显示 `GET / 200 text/html; charset=utf-8 361 B` 与 `GET photo.png 200 image/png 70 B`；`curl /doc.pdf` 返回 `200 application/pdf`（596 B）、`curl /%2e%2e/secret.txt` 返回 `400`（路径穿越拦截）、`curl /` 返回 `200 text/html`；点击「停止预览」后端口连接拒绝且 UI 恢复为「启动预览」；退出应用后预览端口关闭（`PreviewManager::stop_all` 无泄漏）。冒烟测试任务与工作区已清理。
+
 ---
 
 ## 2. 当前运行架构
