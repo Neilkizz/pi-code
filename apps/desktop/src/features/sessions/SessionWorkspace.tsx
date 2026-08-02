@@ -32,6 +32,7 @@ interface SessionWorkspaceProps {
   hostStatus: DesktopHostStatus;
   taskView: TaskViewState;
   permissions: TaskPermissionRequest[];
+  resolveToolLabel?: (toolName: string) => string | null;
   profile: TaskRuntimeProfile;
   isolation: TaskIsolation;
   repositoryInfo: RepositoryInfo | null;
@@ -109,6 +110,7 @@ export function SessionWorkspace({
   onSubmit,
   onAbort,
   onRequestSessionTree,
+  resolveToolLabel,
   onError,
 }: SessionWorkspaceProps) {
   const { t } = useI18n();
@@ -159,7 +161,11 @@ export function SessionWorkspace({
         taskError={runtimeTask?.error}
         showActivity
       />
-      <ApprovalShelf requests={permissions} onResolve={onPermission} />
+      <ApprovalShelf
+        requests={permissions}
+        onResolve={onPermission}
+        resolveToolLabel={resolveToolLabel}
+      />
       <Composer
         hasTask={Boolean(record)}
         cwd={cwd}

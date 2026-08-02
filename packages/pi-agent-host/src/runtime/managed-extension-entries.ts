@@ -4,14 +4,49 @@ import { extname, join, resolve, sep } from "node:path";
 const MAX_EXTENSION_ENTRIES = 64;
 const SUPPORTED_EXTENSIONS = new Set([".ts", ".js", ".mjs", ".cjs"]);
 
+export interface PiExtensionToolDecl {
+  name: string;
+  label?: string;
+  description?: string;
+}
+
+export interface PiExtensionCommandDecl {
+  name: string;
+  description?: string;
+}
+
+export interface PiExtensionEntry {
+  entry: string;
+  description?: string;
+  icon?: string;
+  tools?: PiExtensionToolDecl[];
+  commands?: PiExtensionCommandDecl[];
+  hooks?: string[];
+  renderers?: string[];
+  flags?: string[];
+  shortcuts?: string[];
+}
+
+/** Declared extension surface (from the pi.extensions manifest). */
+export interface ExtensionDeclaredSurface {
+  description?: string;
+  icon?: string;
+  tools: PiExtensionToolDecl[];
+  commands: PiExtensionCommandDecl[];
+  hooks: string[];
+  renderers: string[];
+  flags: string[];
+  shortcuts: string[];
+}
+
 export async function resolveManagedExtensionEntries(
   input: string,
-): Promise<string[]> {
+): Promise<{ paths: string[]; surface: ExtensionDeclaredSurface }> {
   const source = await realpath(input);
   const metadata = await stat(source);
   if (metadata.isFile()) {
     assertExtensionFile(source);
-    return [source];
+    return { paths: [source], surface: emptySurface() };
   }
   if (!metadata.isDirectory()) {
     throw new Error("Managed Extension path must be a file or directory");
@@ -19,13 +54,20 @@ export async function resolveManagedExtensionEntries(
 
   const manifestEntries = await readManifestEntries(source);
   if (manifestEntries) {
-    return resolveEntries(source, manifestEntries);
+    const surface = mergeDeclaredSurface(manifestEntries);
+    return {
+      paths: await resolveEntries(source, manifestEntries.map((entry) => entry.entry)),
+      surface,
+    };
   }
 
   for (const filename of ["index.ts", "index.js", "index.mjs", "index.cjs"]) {
     const candidate = join(source, filename);
     if (await isFile(candidate)) {
-      return [await realpath(candidate)];
+      return {
+        paths: [await realpath(candidate)],
+        surface: emptySurface(),
+      };
     }
   }
 
@@ -42,10 +84,15 @@ export async function resolveManagedExtensionEntries(
       "Managed Extension directory has no pi.extensions manifest or extension entry file",
     );
   }
-  return resolveEntries(source, directFiles);
+  return {
+    paths: await resolveEntries(source, directFiles),
+    surface: emptySurface(),
+  };
 }
 
-async function readManifestEntries(root: string): Promise<string[] | undefined> {
+async function readManifestEntries(
+  root: string,
+): Promise<PiExtensionEntry[] | undefined> {
   const manifestPath = join(root, "package.json");
   if (!(await isFile(manifestPath))) {
     return undefined;
@@ -60,12 +107,107 @@ async function readManifestEntries(root: string): Promise<string[] | undefined> 
   if (
     !Array.isArray(entries) ||
     entries.length === 0 ||
-    entries.length > MAX_EXTENSION_ENTRIES ||
-    entries.some((entry) => typeof entry !== "string" || !entry.trim())
+    entries.length > MAX_EXTENSION_ENTRIES
   ) {
     throw new Error("Managed Extension pi.extensions manifest is invalid");
   }
-  return entries as string[];
+  return entries.map(normalizeManifestEntry);
+}
+
+function normalizeManifestEntry(value: unknown): PiExtensionEntry {
+  if (typeof value === "string") {
+    if (!value.trim()) {
+      throw new Error("Managed Extension pi.extensions entry cannot be empty");
+    }
+    return { entry: value };
+  }
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Managed Extension pi.extensions entry must be a path or object");
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.entry !== "string" || !record.entry.trim()) {
+    throw new Error("Managed Extension pi.extensions object entry requires a string entry");
+  }
+  return {
+    entry: record.entry,
+    description: optionalString(record.description),
+    icon: optionalString(record.icon),
+    tools: optionalArray(record.tools).map(normalizeTool),
+    commands: optionalArray(record.commands).map(normalizeCommand),
+    hooks: optionalStringArray(record.hooks),
+    renderers: optionalStringArray(record.renderers),
+    flags: optionalStringArray(record.flags),
+    shortcuts: optionalStringArray(record.shortcuts),
+  };
+}
+
+function normalizeTool(value: unknown): PiExtensionToolDecl {
+  if (typeof value !== "object" || value === null || typeof (value as Record<string, unknown>).name !== "string") {
+    throw new Error("Managed Extension tool declaration requires a name");
+  }
+  const record = value as Record<string, unknown>;
+  const label = optionalString(record.label);
+  const description = optionalString(record.description);
+  return {
+    name: record.name as string,
+    ...(label ? { label } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
+function normalizeCommand(value: unknown): PiExtensionCommandDecl {
+  if (typeof value !== "object" || value === null || typeof (value as Record<string, unknown>).name !== "string") {
+    throw new Error("Managed Extension command declaration requires a name");
+  }
+  const record = value as Record<string, unknown>;
+  const description = optionalString(record.description);
+  return {
+    name: record.name as string,
+    ...(description ? { description } : {}),
+  };
+}
+
+function mergeDeclaredSurface(entries: PiExtensionEntry[]): ExtensionDeclaredSurface {
+  const surface: ExtensionDeclaredSurface = emptySurface();
+  for (const entry of entries) {
+    if (surface.description === undefined && entry.description !== undefined) {
+      surface.description = entry.description;
+    }
+    if (surface.icon === undefined && entry.icon !== undefined) {
+      surface.icon = entry.icon;
+    }
+    surface.tools.push(...(entry.tools ?? []));
+    surface.commands.push(...(entry.commands ?? []));
+    surface.hooks.push(...(entry.hooks ?? []));
+    surface.renderers.push(...(entry.renderers ?? []));
+    surface.flags.push(...(entry.flags ?? []));
+    surface.shortcuts.push(...(entry.shortcuts ?? []));
+  }
+  return surface;
+}
+
+function emptySurface(): ExtensionDeclaredSurface {
+  return {
+    tools: [],
+    commands: [],
+    hooks: [],
+    renderers: [],
+    flags: [],
+    shortcuts: [],
+  };
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function optionalStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function optionalArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 async function resolveEntries(

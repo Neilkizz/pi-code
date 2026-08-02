@@ -12,6 +12,10 @@ import type {
 } from "@pi-desktop/protocol";
 import { useI18n } from "../../i18n/I18nProvider";
 import {
+  hasDeclaredSurface,
+  hasNonToolSurface,
+} from "./surface";
+import {
   activateExtensionVersion,
   deleteExtension,
   getPiAgentUpdateStatus,
@@ -1090,6 +1094,94 @@ export function ExtensionCenter() {
                       )}
                     </div>
                   </details>
+                  <details className="capability-list">
+                    <summary>
+                      {t("Capabilities")}
+                      <span>
+                        {hasDeclaredSurface(extension)
+                          ? t("Declared")
+                          : t("None")}
+                      </span>
+                    </summary>
+                    <div className="capability-list__body">
+                      {!hasDeclaredSurface(extension) ? (
+                        <p className="capability-list__empty">
+                          {t("No capabilities declared.")}
+                        </p>
+                      ) : (
+                        <>
+                          {extension.surface?.description ? (
+                            <p className="capability-list__description">
+                              {extension.surface.description}
+                            </p>
+                          ) : null}
+                          {extension.surface && extension.surface.tools.length > 0 ? (
+                            <CapabilityGroup title={t("Tools")}>
+                              {extension.surface.tools.map((tool) => (
+                                <div className="capability-item" key={tool.name}>
+                                  <strong>{tool.label ?? tool.name}</strong>
+                                  {tool.description ? (
+                                    <span>{tool.description}</span>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </CapabilityGroup>
+                          ) : null}
+                          {extension.surface && hasNonToolSurface(extension.surface) ? (
+                            <>
+                              {extension.surface.commands.length > 0 ? (
+                                <CapabilityGroup
+                                  title={t("Commands")}
+                                  disabled
+                                >
+                                  {extension.surface.commands.map((command) => (
+                                    <div
+                                      className="capability-item"
+                                      key={command.name}
+                                    >
+                                      <strong>{command.name}</strong>
+                                      {command.description ? (
+                                        <span>{command.description}</span>
+                                      ) : null}
+                                    </div>
+                                  ))}
+                                </CapabilityGroup>
+                              ) : null}
+                              {extension.surface && extension.surface.hooks.length > 0 ? (
+                                <CapabilityGroup title={t("Hooks")} disabled>
+                                  {extension.surface.hooks.map((hook) => (
+                                    <div className="capability-item" key={hook}>
+                                      <strong>{hook}</strong>
+                                    </div>
+                                  ))}
+                                </CapabilityGroup>
+                              ) : null}
+                              {extension.surface &&
+                              extension.surface.renderers.length > 0 ? (
+                                <CapabilityGroup title={t("Renderers")} disabled>
+                                  {extension.surface.renderers.map(
+                                    (renderer) => (
+                                      <div
+                                        className="capability-item"
+                                        key={renderer}
+                                      >
+                                        <strong>{renderer}</strong>
+                                      </div>
+                                    ),
+                                  )}
+                                </CapabilityGroup>
+                              ) : null}
+                              <p className="capability-list__disabled-note">
+                                {t(
+                                  "Hooks, commands, and renderers are advertised but their execution is disabled by default.",
+                                )}
+                              </p>
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  </details>
                   <div className="endpoint-actions">
                     {packageUpdate?.updateAvailable ? (
                       <button
@@ -1168,6 +1260,27 @@ function FindingRow({ finding }: { finding: ExtensionFinding }) {
       <p>{finding.message}</p>
       {finding.file ? <code>{finding.file}</code> : null}
     </article>
+  );
+}
+
+function CapabilityGroup({
+  title,
+  disabled,
+  children,
+}: {
+  title: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className={`capability-group ${disabled ? "capability-group--disabled" : ""}`}>
+      <div className="capability-group__head">
+        <span>{title}</span>
+        {disabled ? <span>{t("Execution disabled")}</span> : null}
+      </div>
+      {children}
+    </div>
   );
 }
 

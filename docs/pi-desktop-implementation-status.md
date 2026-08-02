@@ -176,6 +176,15 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-01）：重建 Release 应用后 `CGWindowList` 确认 quick-entry 窗口存在且默认隐藏（560×360）；`Cmd+Shift+Space` 全局快捷键经 `System Events` keystroke 触发后窗口上屏（AX 确认标题「快速发起」/占位符/「截图」开关/「提交」按钮完整渲染；注：CGEvent 合成键事件不触发 Carbon 热键，真实键事件可）；提交后主窗口 AX 树确认隐藏修复生效（quick-entry `onscreen` 消失）、新 scratch 任务创建、prompt 进入 Timeline 且 Composer 转「发送跟进」（任务运行中）；开启「截图」提交时因本环境未授予 Screen Recording 权限，`attachment_screenshot` 返回 `SCREEN_RECORDING_PERMISSION_DENIED` 并优雅降级为纯文本提交（任务无附件）；普通 New Chat 入口不受影响。冒烟中修复 quick-entry 提交后未隐藏问题（新增 `quick_entry_hide` 命令，主窗口 `handleQuickEntrySubmit` 开头调用）。冒烟测试任务与 scratch 目录已清理。
 
+### V3 Extension Contract v1 实施进度（2026-08-02）
+
+1. **契约**：`pi.extensions` manifest 从 `string[]` 扩展为结构化对象数组（兼容两者）——`{ entry, description?, icon?, tools?, commands?, hooks?, renderers?, flags?, shortcuts? }`，`resolveManagedExtensionEntries` 现返回 `{ paths, surface }`（`managed-extension-entries.ts`），worker `ready` 清单携带声明面（hooks/commands/renderers 标注 disabled，`createRestrictedContext` stub 保留，执行仍禁）；
+2. **通告**：Rust `extensions.rs` 新增 `ExtensionSurface`/`ExtensionToolInfo`/`ExtensionCommandInfo` 类型，`save()`/npm 安装/`activate_version` 时解析快照内 `package.json` 的 `pi.extensions`（字符串或对象兼容），存入 `ExtensionProfile.surface`（serde default 向后兼容），`extension_list` 返回——桌面即知扩展声明面，无需任务运行；
+3. **能力清单**：ExtensionCenter 每个扩展卡片新增「能力」`capability-list` 区块——声明工具（name/label/描述）、命令、钩子、渲染器；非 tool 表面经 `CapabilityGroup--disabled` 标注「执行已禁用」；无声明显示「未声明任何能力」；
+4. **友好审批**：新 `extensionToolLabel` 纯函数把 `extension:{id}:{tool}` 映射为声明工具 label/描述；App 启动加载 `extension_list` 得 `extensionProfiles`，经 `resolveToolLabel` 传给 SessionWorkspace→ApprovalShelf，审批弹窗显示友好名而非原始身份串。
+
+验证证据：新增 host `managed-extension-entries.test.mjs` 4 项（legacy 字符串、结构化对象、混合、逃逸拒绝，返回 `{paths, surface}`）、Rust `extensions.rs` 3 项（结构化 surface 解析、legacy 空 surface、缺 manifest 空 surface）、前端 `surface.test.ts` 8 项；host 全量 26/26、`npm --prefix apps/desktop run test:unit`（99 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、`cargo test`（81 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 全部通过。hooks/commands/renderers **执行**保持默认关闭（风险备注）；desktop command 执行与渲染器桥接（`renderCall`/`setWidget`）留待 v2。
+
 ---
 
 ## 2. 当前运行架构
@@ -640,7 +649,7 @@ npm run desktop:dmg
 
 | ID | 工作 | 依赖 | 估算 | 验收 | 风险与回滚 |
 |---|---|---|---:|---|---|
-| NEXT-E01 | Extension Hook/Command/Renderer Contract | Worker、Broker | 8 人日 | Host 隔离、崩溃、Capability、版本回滚 | 自定义 Tool 以外默认关闭 |
+| NEXT-E01 | Extension Hook/Command/Renderer Contract | Worker、Broker | 8 人日 | ✅ 契约+声明面通告+能力清单+友好审批；hooks/commands/renderers 执行默认关 | 自定义 Tool 以外默认关闭 |
 | NEXT-E02 | Skills/Prompts/Themes 管理 | Resource Model | 5 人日 | 安装、启停、Scope、导入导出 | 保留 Local Extension 页 |
 | NEXT-E03 | MCP/Connector Center | Broker、Keychain | 8 人日 | Local/Remote、Schema、审批、重连 | 总开关关闭 |
 | NEXT-P01 | x64 + Universal Build | CI、Runtime Stage | 4 人日 | 两种架构真机启动和 Host Smoke | 分别发布 arm64/x64 |

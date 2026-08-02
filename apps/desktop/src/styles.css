@@ -2280,3 +2280,76 @@ summary:focus-visible {
   opacity: 0.5;
   cursor: default;
 }
+
+/* Extension Capabilities */
+.capability-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+
+.capability-list__description {
+  margin: 0;
+  font-size: var(--font-ui-sm);
+  color: var(--text-secondary);
+}
+
+.capability-list__empty {
+  margin: 0;
+  font-size: var(--font-ui-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.capability-list__disabled-note {
+  margin: 4px 0 0;
+  font-size: var(--font-ui-xs);
+  color: var(--text-tertiary);
+}
+
+.capability-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capability-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--font-ui-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.capability-group--disabled .capability-group__head {
+  color: var(--text-tertiary);
+}
+
+.capability-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 8px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  font-size: var(--font-ui-sm);
+}
+
+.capability-item strong {
+  font-weight: 630;
+  color: var(--text);
+}
+
+.capability-item span {
+  color: var(--text-tertiary);
+  font-size: var(--font-ui-xs);
+}
+
+.capability-group--disabled .capability-item {
+  opacity: 0.6;
+}

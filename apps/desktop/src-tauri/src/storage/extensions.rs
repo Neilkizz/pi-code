@@ -51,6 +51,48 @@ pub struct ExtensionFinding {
     pub file: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtensionToolInfo {
+    pub name: String,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtensionCommandInfo {
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// Declared extension surface from the `pi.extensions` manifest. Tools are
+/// executable; hooks/commands/renderers/flags/shortcuts are advertised but their
+/// execution stays disabled by default.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtensionSurface {
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub tools: Vec<ExtensionToolInfo>,
+    #[serde(default)]
+    pub commands: Vec<ExtensionCommandInfo>,
+    #[serde(default)]
+    pub hooks: Vec<String>,
+    #[serde(default)]
+    pub renderers: Vec<String>,
+    #[serde(default)]
+    pub flags: Vec<String>,
+    #[serde(default)]
+    pub shortcuts: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExtensionProfile {
@@ -74,6 +116,8 @@ pub struct ExtensionProfile {
     pub active_version: String,
     #[serde(default)]
     pub versions: Vec<ExtensionVersion>,
+    #[serde(default)]
+    pub surface: ExtensionSurface,
     pub findings: Vec<ExtensionFinding>,
     pub scanned_files: usize,
     pub scanned_bytes: u64,
@@ -206,6 +250,7 @@ impl ExtensionStore {
             versions.push(version);
         }
         versions.sort_by(|left, right| right.installed_at.cmp(&left.installed_at));
+        let surface = parse_declared_surface(Path::new(&scan.source_path))?;
         let profile = ExtensionProfile {
             id: id.clone(),
             name: required(&draft.name, "Extension name")?,
@@ -220,6 +265,7 @@ impl ExtensionStore {
             content_hash: scan.content_hash.clone(),
             active_version: scan.content_hash,
             versions,
+            surface,
             findings: scan.findings,
             scanned_files: scan.scanned_files,
             scanned_bytes: scan.scanned_bytes,
@@ -348,6 +394,7 @@ impl ExtensionStore {
                 content_hash: content_hash.clone(),
                 active_version: content_hash,
                 versions,
+                surface: parse_declared_surface(&source_root)?,
                 findings: scan.findings,
                 scanned_files: scan.scanned_files,
                 scanned_bytes: scan.scanned_bytes,
@@ -465,6 +512,7 @@ impl ExtensionStore {
         profile.approved = version.approved;
         profile.content_hash = version.content_hash.clone();
         profile.active_version = version.content_hash;
+        profile.surface = parse_declared_surface(Path::new(&profile.install_path))?;
         profile.findings = version.findings;
         profile.scanned_files = version.scanned_files;
         profile.scanned_bytes = version.scanned_bytes;
@@ -977,6 +1025,107 @@ fn scan_package_json(
     Ok(())
 }
 
+/// Parse the declared extension surface from the `pi.extensions` manifest in the
+/// snapshot's package.json. Accepts both legacy string entries and structured
+/// object entries declaring tools/commands/hooks/renderers. A missing or invalid
+/// manifest yields an empty surface (nothing is declared).
+fn parse_declared_surface(extension_dir: &Path) -> Result<ExtensionSurface, String> {
+    let manifest_bytes = match fs::read(extension_dir.join("package.json")) {
+        Ok(bytes) => bytes,
+        Err(_) => return Ok(ExtensionSurface::default()),
+    };
+    let package: serde_json::Value = serde_json::from_slice(&manifest_bytes)
+        .map_err(|error| format!("Cannot parse extension package.json: {error}"))?;
+    let Some(extensions) = package
+        .get("pi")
+        .and_then(|pi| pi.get("extensions"))
+        .and_then(serde_json::Value::as_array)
+    else {
+        return Ok(ExtensionSurface::default());
+    };
+
+    let mut surface = ExtensionSurface::default();
+    for entry in extensions {
+        match entry {
+            serde_json::Value::String(path) => {
+                if path.trim().is_empty() {
+                    return Err("Extension pi.extensions entry cannot be empty".into());
+                }
+            }
+            serde_json::Value::Object(record) => {
+                let entry_path = record
+                    .get("entry")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| {
+                        "Extension pi.extensions object entry requires a string entry".to_string()
+                    })?;
+                if entry_path.trim().is_empty() {
+                    return Err("Extension pi.extensions object entry cannot be empty".into());
+                }
+                surface.description = surface
+                    .description
+                    .or_else(|| optional_string(record.get("description")));
+                surface.icon = surface.icon.or_else(|| optional_string(record.get("icon")));
+                if let Some(tools) = record.get("tools").and_then(serde_json::Value::as_array) {
+                    for tool in tools {
+                        if let Some(name) = tool.get("name").and_then(serde_json::Value::as_str) {
+                            surface.tools.push(ExtensionToolInfo {
+                                name: name.to_string(),
+                                label: optional_string(tool.get("label")),
+                                description: optional_string(tool.get("description")),
+                            });
+                        }
+                    }
+                }
+                if let Some(commands) = record.get("commands").and_then(serde_json::Value::as_array)
+                {
+                    for command in commands {
+                        if let Some(name) = command.get("name").and_then(serde_json::Value::as_str)
+                        {
+                            surface.commands.push(ExtensionCommandInfo {
+                                name: name.to_string(),
+                                description: optional_string(command.get("description")),
+                            });
+                        }
+                    }
+                }
+                surface.hooks.extend(string_array(record.get("hooks")));
+                surface
+                    .renderers
+                    .extend(string_array(record.get("renderers")));
+                surface.flags.extend(string_array(record.get("flags")));
+                surface
+                    .shortcuts
+                    .extend(string_array(record.get("shortcuts")));
+            }
+            _ => {
+                return Err("Extension pi.extensions entry must be a path or object".into());
+            }
+        }
+    }
+    Ok(surface)
+}
+
+fn optional_string(value: Option<&serde_json::Value>) -> Option<String> {
+    value
+        .and_then(serde_json::Value::as_str)
+        .filter(|text| !text.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn string_array(value: Option<&serde_json::Value>) -> Vec<String> {
+    value
+        .and_then(serde_json::Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(ToOwned::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn load(path: &Path) -> Result<ExtensionStoreFile, String> {
     if !path.exists() {
         return Ok(ExtensionStoreFile {
@@ -1084,6 +1233,62 @@ mod tests {
             .any(|finding| finding.capability == "symlink"));
 
         fs::remove_dir_all(directory).expect("temporary extension cleanup");
+    }
+
+    #[test]
+    fn parses_structured_pi_extensions_into_declared_surface() {
+        let directory =
+            std::env::temp_dir().join(format!("pi-extension-surface-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("temporary extension directory");
+        fs::write(directory.join("index.ts"), "export default () => {}").expect("entry");
+        fs::write(
+            directory.join("package.json"),
+            r#"{"name":"surface","pi":{"extensions":[{"entry":"index.ts","description":"Example","tools":[{"name":"web_search","label":"Web Search","description":"Search"}],"commands":[{"name":"search","description":"Run search"}],"hooks":["agent_start"],"renderers":["message"],"flags":["v"],"shortcuts":["s"]}]}}"#,
+        )
+        .expect("manifest");
+
+        let surface = parse_declared_surface(&directory).expect("surface");
+        assert_eq!(surface.description.as_deref(), Some("Example"));
+        assert_eq!(surface.tools.len(), 1);
+        assert_eq!(surface.tools[0].name, "web_search");
+        assert_eq!(surface.tools[0].label.as_deref(), Some("Web Search"));
+        assert_eq!(surface.commands[0].name, "search");
+        assert_eq!(surface.hooks, vec!["agent_start"]);
+        assert_eq!(surface.renderers, vec!["message"]);
+        assert_eq!(surface.flags, vec!["v"]);
+        assert_eq!(surface.shortcuts, vec!["s"]);
+
+        fs::remove_dir_all(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn legacy_string_pi_extensions_yields_empty_surface() {
+        let directory =
+            std::env::temp_dir().join(format!("pi-extension-legacy-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("temporary extension directory");
+        fs::write(directory.join("index.ts"), "export default () => {}").expect("entry");
+        fs::write(
+            directory.join("package.json"),
+            r#"{"pi":{"extensions":["index.ts"]}}"#,
+        )
+        .expect("manifest");
+
+        let surface = parse_declared_surface(&directory).expect("surface");
+        assert_eq!(surface, ExtensionSurface::default());
+
+        fs::remove_dir_all(directory).expect("cleanup");
+    }
+
+    #[test]
+    fn missing_manifest_yields_empty_surface() {
+        let directory =
+            std::env::temp_dir().join(format!("pi-extension-nomanifest-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("temporary extension directory");
+
+        let surface = parse_declared_surface(&directory).expect("surface");
+        assert_eq!(surface, ExtensionSurface::default());
+
+        fs::remove_dir_all(directory).expect("cleanup");
     }
 
     #[test]

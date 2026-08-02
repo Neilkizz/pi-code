@@ -79,7 +79,7 @@ async function initialize(bootstrap: WorkerBootstrap): Promise<void> {
     );
   }
 
-  const extensionEntries = await resolveManagedExtensionEntries(
+  const { paths: extensionEntries, surface } = await resolveManagedExtensionEntries(
     bootstrap.extension.installPath,
   );
   const result = await loadExtensions(extensionEntries, bootstrap.cwd);
@@ -123,6 +123,19 @@ async function initialize(bootstrap: WorkerBootstrap): Promise<void> {
       parameters: cloneSerializable(definition.parameters),
       executionMode: definition.executionMode,
     })),
+    // Declared extension surface from the pi.extensions manifest. Tools are
+    // executable; hooks/commands/renderers/flags/shortcuts are advertised but
+    // their execution remains disabled by default (see the ready manifest).
+    surface: {
+      description: surface.description,
+      icon: surface.icon,
+      tools: surface.tools,
+      commands: surface.commands,
+      hooks: surface.hooks,
+      renderers: surface.renderers,
+      flags: surface.flags,
+      shortcuts: surface.shortcuts,
+    },
     unsupported: [...unsupported],
   });
 }

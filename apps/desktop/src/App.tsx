@@ -10,6 +10,7 @@ import type {
   DesktopTaskStatus,
   DesktopToHostPayload,
   EndpointProfile,
+  ExtensionProfile,
   HostToDesktopMessage,
   PersistedTask,
   PiSessionEvent,
@@ -38,6 +39,7 @@ import {
   inspectGitRepository,
   invokeDesktopBootstrap,
   listEndpoints,
+  listExtensions,
   listProjects,
   listTasks,
   listenToAgentHost,
@@ -61,6 +63,7 @@ import {
 import { SessionSidebar } from "./features/sessions/SessionSidebar";
 import { SessionWorkspace } from "./features/sessions/SessionWorkspace";
 import { isFeatureEnabled } from "./features/flags";
+import { extensionToolLabel } from "./features/extensions/surface";
 import {
   computeDockBadge,
   detectStatusTransition,
@@ -124,6 +127,7 @@ export function App() {
   const [projectCheckMessage, setProjectCheckMessage] = useState("");
   const [taskViews, setTaskViews] = useState<Record<string, TaskViewState>>({});
   const [endpoints, setEndpoints] = useState<EndpointProfile[]>([]);
+  const [extensionProfiles, setExtensionProfiles] = useState<ExtensionProfile[]>([]);
   const [taskProfile, setTaskProfile] = useState<TaskRuntimeProfile>({
     permissionMode: "ask",
   });
@@ -280,10 +284,11 @@ export function App() {
         onLog: handleHostLog,
       });
 
-      const [payload, savedTasks, savedProjects] = await Promise.all([
+      const [payload, savedTasks, savedProjects, extensions] = await Promise.all([
         invokeDesktopBootstrap(),
         listTasks(false),
         listProjects(),
+        listExtensions(),
       ]);
       if (cancelled) {
         return;
@@ -291,6 +296,7 @@ export function App() {
 
       setBootstrap(payload);
       setSnapshot(payload.snapshot);
+      setExtensionProfiles(extensions);
       for (const task of payload.snapshot.tasks) {
         lastTaskStatusRef.current.set(task.id, task.status);
       }
@@ -1755,6 +1761,12 @@ export function App() {
                 treeLoading: false,
               }));
             })
+          }
+          resolveToolLabel={(toolName) =>
+            extensionToolLabel(
+              toolName,
+              extensionProfiles.map((profile) => profile.surface),
+            )
           }
           onError={setError}
         />

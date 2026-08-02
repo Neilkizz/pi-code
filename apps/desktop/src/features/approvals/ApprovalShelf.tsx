@@ -5,11 +5,14 @@ import { compactJson } from "../sessions/presentation";
 interface ApprovalShelfProps {
   requests: TaskPermissionRequest[];
   onResolve: (request: TaskPermissionRequest, approved: boolean) => void;
+  /** Resolve a friendly label for `extension:*` tool identities. */
+  resolveToolLabel?: (toolName: string) => string | null;
 }
 
 export function ApprovalShelf({
   requests,
   onResolve,
+  resolveToolLabel,
 }: ApprovalShelfProps) {
   const { t } = useI18n();
 
@@ -24,7 +27,9 @@ export function ApprovalShelf({
           <div className="permission-card__header">
             <div>
               <span>{t("Tool approval")}</span>
-              <strong>{request.toolName}</strong>
+              <strong>
+                {resolveToolLabel?.(request.toolName) ?? request.toolName}
+              </strong>
             </div>
             <span>{t("Waiting")}</span>
           </div>

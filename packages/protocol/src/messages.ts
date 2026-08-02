@@ -437,6 +437,31 @@ export interface ExtensionFinding {
   file?: string;
 }
 
+export interface ExtensionToolInfo {
+  name: string;
+  label?: string;
+  description?: string;
+}
+
+export interface ExtensionCommandInfo {
+  name: string;
+  description?: string;
+}
+
+/** Declared extension surface from the pi.extensions manifest. Tools are
+ *  executable; hooks/commands/renderers/flags/shortcuts are advertised but their
+ *  execution stays disabled by default. */
+export interface ExtensionSurface {
+  description?: string;
+  icon?: string;
+  tools: ExtensionToolInfo[];
+  commands: ExtensionCommandInfo[];
+  hooks: string[];
+  renderers: string[];
+  flags: string[];
+  shortcuts: string[];
+}
+
 export interface ExtensionProfile {
   id: string;
   name: string;
@@ -451,6 +476,7 @@ export interface ExtensionProfile {
   contentHash: string;
   activeVersion: string;
   versions: ExtensionVersion[];
+  surface?: ExtensionSurface;
   findings: ExtensionFinding[];
   scannedFiles: number;
   scannedBytes: number;
