@@ -18,12 +18,14 @@ import {
 } from "../flags";
 import { EndpointCenter } from "../endpoints/EndpointCenter";
 import { ExtensionCenter } from "../extensions/ExtensionCenter";
+import { ResourcesCenter } from "../resources/ResourcesCenter";
 
 export type SettingsSection =
   | "general"
   | "endpoints"
   | "extensions"
-  | "runtime";
+  | "runtime"
+  | "resources";
 
 interface SettingsCenterProps {
   section: SettingsSection;
@@ -113,6 +115,13 @@ export function SettingsCenter({
           hidden={!matches(t("Runtime"))}
           onClick={() => onSectionChange("runtime")}
         />
+        <SettingsNavButton
+          active={section === "resources"}
+          icon="book"
+          label={t("Skills & Prompts")}
+          hidden={!matches(t("Skills & Prompts"))}
+          onClick={() => onSectionChange("resources")}
+        />
         </nav>
 
         <div className="settings-detail">
@@ -129,6 +138,8 @@ export function SettingsCenter({
             <EndpointCenter onProfilesChanged={onProfilesChanged} />
           ) : section === "extensions" ? (
             <ExtensionCenter />
+          ) : section === "resources" ? (
+            <ResourcesCenter />
           ) : section === "runtime" ? (
             <RuntimeSettings
               bootstrap={bootstrap}
@@ -346,7 +357,7 @@ function SettingsNavButton({
   onClick,
 }: {
   active: boolean;
-  icon: "sliders" | "activity" | "puzzle" | "settings";
+  icon: "sliders" | "activity" | "puzzle" | "settings" | "book";
   label: string;
   hidden: boolean;
   onClick: () => void;

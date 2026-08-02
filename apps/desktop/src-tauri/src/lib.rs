@@ -30,6 +30,7 @@ use storage::endpoints::{
 use storage::event_store::{EventStore, TaskEventReplay};
 use storage::extensions::{ExtensionDraft, ExtensionProfile, ExtensionScanResult, ExtensionStore};
 use storage::project_repository::{ProjectRepository, ProjectSummary};
+use storage::resources::{ResourceDraft, ResourceKind, ResourceProfile, ResourceStore};
 use storage::task_repository::TaskRepository;
 use storage::tasks::{TaskCreateDraft, TaskDraft, TaskIsolation, TaskRecord, TaskWorktree};
 use tauri::{Emitter, Manager};
@@ -913,6 +914,97 @@ async fn extension_pick_path(
 }
 
 #[tauri::command]
+fn resource_list(
+    app: tauri::AppHandle,
+    kind: Option<String>,
+) -> Result<Vec<ResourceProfile>, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ResourceStore::list(&paths.resources_file, parse_resource_kind(kind.as_deref()))
+}
+
+#[tauri::command]
+fn resource_save(app: tauri::AppHandle, draft: ResourceDraft) -> Result<ResourceProfile, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ResourceStore::save(&paths, draft)
+}
+
+#[tauri::command]
+fn resource_set_enabled(
+    app: tauri::AppHandle,
+    id: String,
+    enabled: bool,
+) -> Result<ResourceProfile, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ResourceStore::set_enabled(&paths, &id, enabled)
+}
+
+#[tauri::command]
+fn resource_delete(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ResourceStore::delete(&paths, &id)
+}
+
+#[tauri::command]
+async fn resource_import(
+    app: tauri::AppHandle,
+    kind: String,
+) -> Result<Option<ResourceProfile>, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    let app_for_picker = app.clone();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app_for_picker
+            .dialog()
+            .file()
+            .set_title("Import Skill / Prompt")
+            .add_filter("Markdown", &["md", "markdown"])
+            .blocking_pick_file()
+            .and_then(|path| path.into_path().ok())
+    })
+    .await
+    .map_err(|error| error.to_string())?;
+    let Some(source_path) = picked else {
+        return Ok(None);
+    };
+    let kind =
+        parse_resource_kind(Some(&kind)).ok_or_else(|| format!("Unknown resource kind: {kind}"))?;
+    ResourceStore::import(&paths, &source_path, kind).map(Some)
+}
+
+#[tauri::command]
+async fn resource_export(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    let content = ResourceStore::export_content(&paths.resources_file, &id)?;
+    let app_for_dialog = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let destination = app_for_dialog
+            .dialog()
+            .file()
+            .set_title("Export Resource")
+            .blocking_save_file()
+            .and_then(|path| path.into_path().ok());
+        if let Some(destination) = destination {
+            std::fs::write(&destination, content).map_err(|error| {
+                format!(
+                    "Cannot export resource to {}: {error}",
+                    destination.display()
+                )
+            })?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn parse_resource_kind(value: Option<&str>) -> Option<ResourceKind> {
+    match value {
+        Some("skill") => Some(ResourceKind::Skill),
+        Some("prompt") => Some(ResourceKind::Prompt),
+        _ => None,
+    }
+}
+
+#[tauri::command]
 fn extension_save(
     app: tauri::AppHandle,
     supervisor: tauri::State<'_, AgentSupervisor>,
@@ -1065,7 +1157,13 @@ pub fn run() {
             extension_set_enabled,
             extension_update,
             extension_activate_version,
-            extension_delete
+            extension_delete,
+            resource_list,
+            resource_save,
+            resource_set_enabled,
+            resource_delete,
+            resource_import,
+            resource_export
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())

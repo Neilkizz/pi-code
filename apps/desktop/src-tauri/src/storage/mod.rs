@@ -5,5 +5,6 @@ pub mod endpoints;
 pub mod event_store;
 pub mod extensions;
 pub mod project_repository;
+pub mod resources;
 pub mod task_repository;
 pub mod tasks;

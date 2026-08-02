@@ -2353,3 +2353,170 @@ summary:focus-visible {
 .capability-group--disabled .capability-item {
   opacity: 0.6;
 }
+
+/* Skills & Prompts Center */
+.resource-center {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resource-center__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.resource-center__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.resource-center__tabs button {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-ui-sm);
+  cursor: pointer;
+}
+
+.resource-center__tabs button.is-active {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+}
+
+.resource-center__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.resource-center__actions button,
+.resource-card__actions button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-ui-xs);
+  cursor: pointer;
+}
+
+.resource-center__actions button:hover,
+.resource-card__actions button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.resource-center__actions button:disabled,
+.resource-card__actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resource-list__empty {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-ui-sm);
+  font-style: italic;
+}
+
+.resource-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.resource-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resource-card__body strong {
+  font-size: var(--font-ui-sm);
+  font-weight: 630;
+  color: var(--text);
+}
+
+.resource-card__body span {
+  color: var(--text-tertiary);
+  font-size: var(--font-ui-xs);
+}
+
+.resource-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resource-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-ui-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.resource-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-muted);
+}
+
+.resource-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-ui-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.resource-form input,
+.resource-form textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-ui-sm);
+}
+
+.resource-form textarea {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  line-height: var(--line-ui-tight);
+}
+
+.resource-form__content {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.resource-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

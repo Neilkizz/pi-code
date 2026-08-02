@@ -526,6 +526,30 @@ export interface ExtensionRuntimeConfig {
   integrityMode: ExtensionIntegrityMode;
 }
 
+export type ResourceKind = "skill" | "prompt";
+export type ResourceScope = "global" | "project";
+
+export interface ResourceProfile {
+  id: string;
+  name: string;
+  kind: ResourceKind;
+  description?: string;
+  content: string;
+  enabled: boolean;
+  scope: ResourceScope;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ResourceDraft {
+  id?: string;
+  name: string;
+  kind: ResourceKind;
+  description?: string;
+  content: string;
+  enabled: boolean;
+}
+
 export type MarketplaceSort = "downloads" | "recent" | "name";
 
 export interface MarketplacePackage {

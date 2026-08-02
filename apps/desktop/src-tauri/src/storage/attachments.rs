@@ -391,6 +391,9 @@ mod tests {
             database_file: root.join("data/pi-desktop.sqlite3"),
             endpoints_file: root.join("data/endpoints.json"),
             extensions_file: root.join("data/extensions.json"),
+            resources_file: root.join("resources.json"),
+            agent_skills: root.join("agent").join("skills"),
+            agent_prompts: root.join("agent").join("prompts"),
             tasks_file: root.join("data/tasks.json"),
             root: root.join("data"),
         };

@@ -13,6 +13,9 @@ pub struct AppPaths {
     pub database_file: PathBuf,
     pub endpoints_file: PathBuf,
     pub extensions_file: PathBuf,
+    pub resources_file: PathBuf,
+    pub agent_skills: PathBuf,
+    pub agent_prompts: PathBuf,
     pub tasks_file: PathBuf,
 }
 
@@ -29,6 +32,9 @@ impl AppPaths {
             database_file: root.join("pi-desktop.sqlite3"),
             endpoints_file: root.join("endpoints.json"),
             extensions_file: root.join("extensions.json"),
+            resources_file: root.join("resources.json"),
+            agent_skills: root.join("agent").join("skills"),
+            agent_prompts: root.join("agent").join("prompts"),
             tasks_file: root.join("tasks.json"),
             root,
         })
@@ -43,6 +49,8 @@ impl AppPaths {
             &self.extension_packages,
             &self.backups,
             &self.worktrees,
+            &self.agent_skills,
+            &self.agent_prompts,
         ] {
             fs::create_dir_all(path)?;
             fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;

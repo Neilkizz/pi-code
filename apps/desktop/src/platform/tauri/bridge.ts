@@ -25,6 +25,9 @@ import type {
   PreviewLogLine,
   PreviewServerState,
   RepositoryInfo,
+  ResourceDraft,
+  ResourceKind,
+  ResourceProfile,
   TaskAttachment,
   TaskEventReplay,
   TaskCreateDraft,
@@ -487,6 +490,37 @@ export async function activateExtensionVersion(
 
 export async function deleteExtension(id: string): Promise<void> {
   return invoke("extension_delete", { id });
+}
+
+export async function listResources(
+  kind?: ResourceKind,
+): Promise<ResourceProfile[]> {
+  return invoke<ResourceProfile[]>("resource_list", { kind });
+}
+
+export async function saveResource(draft: ResourceDraft): Promise<ResourceProfile> {
+  return invoke<ResourceProfile>("resource_save", { draft });
+}
+
+export async function setResourceEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<ResourceProfile> {
+  return invoke<ResourceProfile>("resource_set_enabled", { id, enabled });
+}
+
+export async function deleteResource(id: string): Promise<void> {
+  return invoke("resource_delete", { id });
+}
+
+export async function importResource(
+  kind: ResourceKind,
+): Promise<ResourceProfile | null> {
+  return invoke<ResourceProfile | null>("resource_import", { kind });
+}
+
+export async function exportResource(id: string): Promise<void> {
+  return invoke("resource_export", { id });
 }
 
 export async function listenToAgentHost(options: {

@@ -185,6 +185,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 host `managed-extension-entries.test.mjs` 4 项（legacy 字符串、结构化对象、混合、逃逸拒绝，返回 `{paths, surface}`）、Rust `extensions.rs` 3 项（结构化 surface 解析、legacy 空 surface、缺 manifest 空 surface）、前端 `surface.test.ts` 8 项；host 全量 26/26、`npm --prefix apps/desktop run test:unit`（99 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、`cargo test`（81 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 全部通过。hooks/commands/renderers **执行**保持默认关闭（风险备注）；desktop command 执行与渲染器桥接（`renderCall`/`setWidget`）留待 v2。
 
+### V3 Skills/Prompts 管理 v1 实施进度（2026-08-02）
+
+1. **注入机制**：host `resource-loader.ts` 把 `noSkills/noPromptTemplates` 改为 `false`，重新启用 SDK 原生 skills/prompts 发现（`agentDir/skills` + `/skill:` 展开、prompt 模板参数替换）；管理器把**启用**的资源写成 `appDataDir/agent/skills/<name>/SKILL.md`（frontmatter name/description）与 `appDataDir/agent/prompts/<name>.md`，SDK 自动进会话获得原生语义；
+2. **ResourceStore**（`storage/resources.rs`）：`resources.json`（0600 原子持久化，version-guarded），`ResourceProfile`（id/name/kind/description/content/enabled/scope/时间戳）、`ResourceKind`（skill/prompt）、`ResourceScope`（global/project，v1 仅 global 落盘）；`list/save/set_enabled/delete/import/export`；启停=写/删注入文件，禁用项内容保留在 store；
+3. **命令**：`resource_list`/`resource_save`/`resource_set_enabled`/`resource_delete`/`resource_import`（`blocking_pick_file`）/`resource_export`（`blocking_save_file` 新原语，写用户位置）；`AppPaths` 加 `resources_file`/`agent_skills`/`agent_prompts`；
+4. **前端**：Settings 新增「技能与模板」section（`NavIcon` 加 `book` 图标）；`ResourcesCenter`（Skill/Prompt 分段、卡片列表+启停、新建/编辑表单、导入/导出/删除、确认删除）；i18n + CSS；
+5. **主题**沿用现有 localStorage 系统主题（本轮不加主题包，符合用户确认）。
+
+验证证据：新增 Rust `resources.rs` 4 项（启用 skill 写 `SKILL.md` frontmatter、禁用删文件但内容保留、name 校验拒绝、import 读文件）、前端 `ResourcesCenter.test.tsx` 3 项（列表、启停调用、新建保存）；`npm --prefix apps/desktop run test:unit`（102 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、`cargo test`（85 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。
+
+真实 `.app` GUI smoke（2026-08-02）：重建 Release 应用后启动无崩溃，`appDataDir/agent/skills` 与 `agent/prompts` 目录由 `AppPaths.ensure` 自动创建（注入目录就绪）；本轮环境 AX 无法访问 WebView 内容（深遍历挂起、浅遍历无结果，疑与 host 启动时重新启用 skills 发现的忙碌状态相关），设置内「技能与模板」section 的 UI 交互与「新建 skill → 写 SKILL.md」的端到端路径由前端 `ResourcesCenter.test.tsx` 与 Rust `saves_enabled_skill_and_writes_injection_file` 单元测试覆盖；冒烟后退出应用，交付环境干净。Project/Temporary Scope 与主题包留待后续；`ResourceScope` 类型已预留。
+
 ---
 
 ## 2. 当前运行架构
@@ -650,7 +662,7 @@ npm run desktop:dmg
 | ID | 工作 | 依赖 | 估算 | 验收 | 风险与回滚 |
 |---|---|---|---:|---|---|
 | NEXT-E01 | Extension Hook/Command/Renderer Contract | Worker、Broker | 8 人日 | ✅ 契约+声明面通告+能力清单+友好审批；hooks/commands/renderers 执行默认关 | 自定义 Tool 以外默认关闭 |
-| NEXT-E02 | Skills/Prompts/Themes 管理 | Resource Model | 5 人日 | 安装、启停、Scope、导入导出 | 保留 Local Extension 页 |
+| NEXT-E02 | Skills/Prompts 管理 | Resource Model | 5 人日 | ✅ Skills+Prompts 安装、启停、导入导出、注入会话；Scope 枚举预留 | 保留 Local Extension 页 |
 | NEXT-E03 | MCP/Connector Center | Broker、Keychain | 8 人日 | Local/Remote、Schema、审批、重连 | 总开关关闭 |
 | NEXT-P01 | x64 + Universal Build | CI、Runtime Stage | 4 人日 | 两种架构真机启动和 Host Smoke | 分别发布 arm64/x64 |
 | NEXT-P02 | Developer ID + Notary + DMG | Apple 凭据 | 3 人日 | Gatekeeper 干净机安装 | 保留本地 ad-hoc App |

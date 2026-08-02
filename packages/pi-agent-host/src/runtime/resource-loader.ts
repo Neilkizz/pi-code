@@ -32,8 +32,11 @@ export async function createDesktopResourceLoader(options: {
     additionalExtensionPaths: [],
     extensionFactories: options.extensionFactories,
     noExtensions: true,
-    noSkills: true,
-    noPromptTemplates: true,
+    // Native skills/prompt templates are discovered from agentDir/skills and
+    // agentDir/prompts, where the desktop resource manager writes enabled
+    // user resources (so they gain SDK-native /skill: and prompt semantics).
+    noSkills: false,
+    noPromptTemplates: false,
     noThemes: true,
     noContextFiles: true,
     appendSystemPrompt: scopedContext,
