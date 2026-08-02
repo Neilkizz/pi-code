@@ -21,7 +21,8 @@
         "fullscreen": false,
         "transparent": false,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 12, "y": 14 }
       },
       {
         "label": "quick-entry",

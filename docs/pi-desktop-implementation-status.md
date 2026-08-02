@@ -209,6 +209,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：新增 Rust `connectors.rs` 4 项（保存/列表、空命令拒绝、启停/runtime_configs/删除、test 报错路径）；前端 `ConnectorCenter.test.tsx` 3 项（列表、启停调用、新建保存）；`npm --prefix apps/desktop run test:unit`（105 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、host 测试 26/26、`cargo test`（89 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。http/sse 远程（`NetworkConnect` capability）、重连增强、schema 深度审批展示留待 v2。
 
+### V3 UI 打磨一轮实施进度（2026-08-02）
+
+1. UI 审查发现 **约 165 个被使用但无样式规则的 CSS 类**（Settings 中心、命令面板、Composer 交互控件、会话工具栏、时间线工具事件卡、用户终端、审批卡、Endpoint/Extension/Project/Marketplace 中心等大面积裸渲染）与暗色悬停不可见、杂散小字号等问题；
+2. **基础设施**：`tokens.css` 新增 `--radius-s`/`--font-ui-2xs`；`styles.css` 新增 `.sr-only`；把 8 处 `rgba(43,40,35,…)` 硬编码悬停/激活色替换为 `color-mix(in srgb, var(--text) X%, transparent)`（暗色可见）、tab chip `rgba(0,0,0,0.06)` 改 token、`.session-link__dot` 裸 `#aaa59b` 改 `var(--text-tertiary)`；7/8/9px 杂散字号归一为 `--font-ui-2xs`；
+3. **主界面**：新增 `.workspace`/`.session-workspace`/`.session-toolbar`（修复 pane-layout 高度链）与 `terminal-button`/`review-button`/`archive-button`；`session-toolbar__title/meta/status` 布局；
+4. **Settings 全套**：`settings-overlay/backdrop/center/nav/detail/close/card-list/page-header`（居中模态 + 毛玻璃 + 两栏导航 + 卡片列表）、`workspace__header/eyebrow/description`、`.panel`/`.preference-card`/`.update-toggle`、`.runtime-badge`/`.status-dot`、Endpoint/Extension/Project/Marketplace 中心类（`endpoint-*`/`extension-*`/`project-*`/`marketplace-*`/`.field`/`.form-grid`/`.segmented-control`）；
+5. **Composer 控件**：`composer__send`/`--stop`（裸 `↑`/`■` 修复）、`composer-select` 变体、`composer__attach/__scope`、`composer-attachments`/`attachment-chip`、`project-picker__*`；textarea 补 `:focus` 焦点环；
+6. **运行时反馈**：时间线工具事件卡 `.activity`（折叠卡/状态徽标/running）、`task-terminal`、`permission-stack`/`permission-card` + `.button--quiet/--primary`、命令面板 `command-palette-*`（毛玻璃面板/搜索/列表高亮）；
+7. **动效/空态**：为按钮/select 加 `transition: background/border/color var(--duration-fast)`；统一空态样式（`.session-tree__state`/`.preview-pane__empty`/`.resource-list__empty`/`.connector-list__empty`/`.session-list__empty`）+ 轻量 `ui-spinner`；header `trafficLightPosition`（tauri.conf.json）+ 左侧 72px 留白防 `π` 图标与红绿灯重叠；quick-entry 加拖拽区。
+
+验证证据：类名覆盖脚本把「被使用但无样式」从 **165 → 0**；`npm --prefix apps/desktop run build`（Vite 产出 CSS 29.8kB → 66.6kB）、`npm run typecheck`、`npm --prefix apps/desktop run test:unit`（105 项通过）全部通过；真实 `.app` 视觉冒烟见发布构建后截图。
+
 ---
 
 ## 2. 当前运行架构

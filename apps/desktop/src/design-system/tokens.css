@@ -42,6 +42,7 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+  --font-ui-2xs: 10px;
   --font-ui-xs: 11px;
   --font-ui-sm: 13px;
   --font-ui-base: 14px;
@@ -51,6 +52,7 @@
   --control-default: 32px;
   --control-comfortable: 36px;
   --control-touch: 44px;
+  --radius-s: 5px;
   --radius-control: 7px;
   --radius-card: 10px;
   --radius-sheet: 14px;
