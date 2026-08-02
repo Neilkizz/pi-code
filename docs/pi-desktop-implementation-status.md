@@ -197,6 +197,18 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 真实 `.app` GUI smoke（2026-08-02）：重建 Release 应用后启动无崩溃，`appDataDir/agent/skills` 与 `agent/prompts` 目录由 `AppPaths.ensure` 自动创建（注入目录就绪）；本轮环境 AX 无法访问 WebView 内容（深遍历挂起、浅遍历无结果，疑与 host 启动时重新启用 skills 发现的忙碌状态相关），设置内「技能与模板」section 的 UI 交互与「新建 skill → 写 SKILL.md」的端到端路径由前端 `ResourcesCenter.test.tsx` 与 Rust `saves_enabled_skill_and_writes_injection_file` 单元测试覆盖；冒烟后退出应用，交付环境干净。Project/Temporary Scope 与主题包留待后续；`ResourceScope` 类型已预留。
 
+### V3 MCP/Connector Center v1 实施进度（2026-08-02）
+
+1. 确认 SDK（`@earendil-works/pi-coding-agent` 0.83）**无原生 MCP**；集成点为扩展 API `pi.registerTool`——host 侧 MCP client + 新 InlineExtension（镜像 `createManagedExtensionTools`/`authorizeManagedInvocation`）；host 进程（无 `--permission`）可 spawn stdio MCP，受限 extension worker 不能；
+2. **Host MCP client**：加 `@modelcontextprotocol/sdk`；新 `runtime/connector-client.ts`（`McpConnector` 封装 `StdioClientTransport`——connect/listTools/callTool/close，pinned cwd `appData/connector-runtime/<id>`）；新 `runtime/connector-tools.ts`（`createConnectorToolsExtension`——对 enabled connector connect + `tools/list` 发现，`Type.Unsafe` 转 TypeBox，注册 `ToolDefinition`（name `connector:<id>:<tool>`、label `MCP: <tool>`），execute 经 `gate.authorize` → `client.request("connector.invoke")` → `callTool`，`gate.registerManagedTool` 登记；连接失败跳过不阻断会话）；
+3. **desktop-host**：`extensionFactories` 加 connector 扩展；`host.configureConnectors` dispatch + `configureConnectors` 存储；`TaskWorkerProxy.configure`/`TaskWorkerLaunch` 转发 connectors 给 per-task worker；
+4. **Rust ConnectorStore**（`storage/connectors.rs`）：`connectors.json`（0600 原子、version-guarded），`ConnectorProfile`（id/name/transport=stdio/command/args/env/enabled/approved/content_hash/credential_ref/时间戳）、`ConnectorDraft`、`ConnectorRuntimeConfig`；Keychain `connector/<id>/token`（service `com.piagent.desktop.connector`，复用 endpoints 模式）；`list/save/set_enabled/delete/test`（spawn smoke：启动 800ms 存活即 ok）；`runtime_configs` 仅 enabled+approved；`AppPaths` 加 `connectors_file`/`connector_runtime`；
+5. **Broker**：`connector.invoke` → `CapabilityAction::ExtensionInvoke`（stdio，镜像 `authorize_extension_snapshot` 的 contentHash 校验），`authorize_connector` 查 `ConnectorStore::runtime_configs`；
+6. **命令**：`connector_list`/`connector_save`/`connector_set_enabled`/`connector_delete`/`connector_test`；`sync_connector_runtime` 在 `agent_host_start` 与每次变更后推送 `host.configureConnectors`（总开关=未启用不推送，符合风险备注）；Protocol 加 Connector 类型 + `host.configureConnectors`；
+7. **前端**：Settings 新增「连接器」section（`NavIcon` 加 `plug` 图标）；`ConnectorCenter`（列表卡片+启停 toggle+Test+删除/确认、新建表单 name/command/args/env/token、测试结果徽标）；i18n + CSS。
+
+验证证据：新增 Rust `connectors.rs` 4 项（保存/列表、空命令拒绝、启停/runtime_configs/删除、test 报错路径）；前端 `ConnectorCenter.test.tsx` 3 项（列表、启停调用、新建保存）；`npm --prefix apps/desktop run test:unit`（105 项通过）、`npm run typecheck`、`npm --prefix apps/desktop run build`、host 测试 26/26、`cargo test`（89 通过，1 项 live 忽略）、`cargo fmt --check` 与 `git diff --check` 通过。http/sse 远程（`NetworkConnect` capability）、重连增强、schema 深度审批展示留待 v2。
+
 ---
 
 ## 2. 当前运行架构
@@ -663,7 +675,7 @@ npm run desktop:dmg
 |---|---|---|---:|---|---|
 | NEXT-E01 | Extension Hook/Command/Renderer Contract | Worker、Broker | 8 人日 | ✅ 契约+声明面通告+能力清单+友好审批；hooks/commands/renderers 执行默认关 | 自定义 Tool 以外默认关闭 |
 | NEXT-E02 | Skills/Prompts 管理 | Resource Model | 5 人日 | ✅ Skills+Prompts 安装、启停、导入导出、注入会话；Scope 枚举预留 | 保留 Local Extension 页 |
-| NEXT-E03 | MCP/Connector Center | Broker、Keychain | 8 人日 | Local/Remote、Schema、审批、重连 | 总开关关闭 |
+| NEXT-E03 | MCP/Connector Center | Broker、Keychain | 8 人日 | ✅ stdio 本地 MCP、工具发现、审批、Keychain token；http/sse 远程与重连留待 v2 | 总开关关闭（未启用不推送） |
 | NEXT-P01 | x64 + Universal Build | CI、Runtime Stage | 4 人日 | 两种架构真机启动和 Host Smoke | 分别发布 arm64/x64 |
 | NEXT-P02 | Developer ID + Notary + DMG | Apple 凭据 | 3 人日 | Gatekeeper 干净机安装 | 保留本地 ad-hoc App |
 | NEXT-P03 | App Updater + Rollback | P02 | 5 人日 | 签名更新、失败回退、DB Migration | Updater Feature Flag |

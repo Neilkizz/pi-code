@@ -2520,3 +2520,187 @@ summary:focus-visible {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* Connector Center */
+.connector-center {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.connector-center__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.connector-center__title {
+  margin: 0;
+  font-size: var(--font-ui-base);
+  font-weight: 700;
+}
+
+.connector-center__subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-ui-sm);
+  line-height: var(--line-ui);
+}
+
+.connector-center__head button {
+  height: var(--control-compact);
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-ui-sm);
+  cursor: pointer;
+}
+
+.connector-center__head button:hover {
+  border-color: var(--line-strong);
+}
+
+.connector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connector-list__empty {
+  color: var(--text-tertiary);
+  font-size: var(--font-ui-sm);
+}
+
+.connector-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.connector-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.connector-card__body strong {
+  font-size: var(--font-ui-sm);
+  font-weight: 650;
+}
+
+.connector-card__command {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+  font-size: var(--font-ui-xs);
+}
+
+.connector-card__test {
+  font-size: var(--font-ui-xs);
+}
+
+.connector-card__test--ok {
+  color: var(--success);
+}
+
+.connector-card__test--fail {
+  color: var(--danger);
+}
+
+.connector-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.connector-card__actions button {
+  height: var(--control-compact);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-ui-xs);
+  cursor: pointer;
+}
+
+.connector-card__actions button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.connector-card__actions .danger-active {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.connector-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-ui-xs);
+  color: var(--text-secondary);
+}
+
+.connector-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-muted);
+}
+
+.connector-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-ui-xs);
+  color: var(--text-secondary);
+}
+
+.connector-form input {
+  height: var(--control-compact);
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-ui-sm);
+}
+
+.connector-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.connector-form__actions button {
+  height: var(--control-compact);
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-ui-sm);
+  cursor: pointer;
+}
+
+.connector-form__actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

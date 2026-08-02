@@ -19,13 +19,15 @@ import {
 import { EndpointCenter } from "../endpoints/EndpointCenter";
 import { ExtensionCenter } from "../extensions/ExtensionCenter";
 import { ResourcesCenter } from "../resources/ResourcesCenter";
+import { ConnectorCenter } from "../connectors/ConnectorCenter";
 
 export type SettingsSection =
   | "general"
   | "endpoints"
   | "extensions"
   | "runtime"
-  | "resources";
+  | "resources"
+  | "connectors";
 
 interface SettingsCenterProps {
   section: SettingsSection;
@@ -122,6 +124,13 @@ export function SettingsCenter({
           hidden={!matches(t("Skills & Prompts"))}
           onClick={() => onSectionChange("resources")}
         />
+        <SettingsNavButton
+          active={section === "connectors"}
+          icon="plug"
+          label={t("Connectors")}
+          hidden={!matches(t("Connectors"))}
+          onClick={() => onSectionChange("connectors")}
+        />
         </nav>
 
         <div className="settings-detail">
@@ -140,6 +149,8 @@ export function SettingsCenter({
             <ExtensionCenter />
           ) : section === "resources" ? (
             <ResourcesCenter />
+          ) : section === "connectors" ? (
+            <ConnectorCenter />
           ) : section === "runtime" ? (
             <RuntimeSettings
               bootstrap={bootstrap}
@@ -357,7 +368,7 @@ function SettingsNavButton({
   onClick,
 }: {
   active: boolean;
-  icon: "sliders" | "activity" | "puzzle" | "settings" | "book";
+  icon: "sliders" | "activity" | "puzzle" | "settings" | "book" | "plug";
   label: string;
   hidden: boolean;
   onClick: () => void;

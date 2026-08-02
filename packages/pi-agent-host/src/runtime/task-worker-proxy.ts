@@ -9,6 +9,7 @@ import {
   createDesktopCommand,
   type DesktopToHostMessage,
   type DesktopTaskState,
+  type ConnectorRuntimeConfig,
   type EndpointRuntimeConfig,
   type ExtensionRuntimeConfig,
   type HostToDesktopMessage,
@@ -28,6 +29,7 @@ export interface TaskWorkerLaunch {
   task: Extract<DesktopToHostMessage, { type: "task.create" }>;
   endpoints: EndpointRuntimeConfig[];
   extensions: ExtensionRuntimeConfig[];
+  connectors: ConnectorRuntimeConfig[];
   onEvent: (message: HostToDesktopMessage) => void;
   onExit: (error: Error) => void;
 }
@@ -91,6 +93,7 @@ export class TaskWorkerProxy {
   async configure(
     endpoints: EndpointRuntimeConfig[],
     extensions: ExtensionRuntimeConfig[],
+    connectors: ConnectorRuntimeConfig[] = [],
   ): Promise<void> {
     await this.request(
       createDesktopCommand({
@@ -102,6 +105,12 @@ export class TaskWorkerProxy {
       createDesktopCommand({
         type: "host.configureExtensions",
         extensions,
+      }),
+    );
+    await this.request(
+      createDesktopCommand({
+        type: "host.configureConnectors",
+        connectors,
       }),
     );
   }
@@ -185,7 +194,11 @@ export class TaskWorkerProxy {
           appDataDir,
         }),
       );
-      await this.configure(this.launch.endpoints, this.launch.extensions);
+      await this.configure(
+        this.launch.endpoints,
+        this.launch.extensions,
+        this.launch.connectors,
+      );
       this.taskState = (await this.request(
         this.launch.task,
       )) as DesktopTaskState;

@@ -16,6 +16,8 @@ pub struct AppPaths {
     pub resources_file: PathBuf,
     pub agent_skills: PathBuf,
     pub agent_prompts: PathBuf,
+    pub connectors_file: PathBuf,
+    pub connector_runtime: PathBuf,
     pub tasks_file: PathBuf,
 }
 
@@ -35,6 +37,8 @@ impl AppPaths {
             resources_file: root.join("resources.json"),
             agent_skills: root.join("agent").join("skills"),
             agent_prompts: root.join("agent").join("prompts"),
+            connectors_file: root.join("connectors.json"),
+            connector_runtime: root.join("connector-runtime"),
             tasks_file: root.join("tasks.json"),
             root,
         })
@@ -51,6 +55,7 @@ impl AppPaths {
             &self.worktrees,
             &self.agent_skills,
             &self.agent_prompts,
+            &self.connector_runtime,
         ] {
             fs::create_dir_all(path)?;
             fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;

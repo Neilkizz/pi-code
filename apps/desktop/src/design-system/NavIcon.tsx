@@ -6,10 +6,12 @@ export type NavIconName =
   | "folder"
   | "settings"
   | "trash"
-  | "book";
+  | "book"
+  | "plug";
 
 const paths: Record<NavIconName, string> = {
   chat: "M4 5.75A2.75 2.75 0 0 1 6.75 3h10.5A2.75 2.75 0 0 1 20 5.75v7.5A2.75 2.75 0 0 1 17.25 16H10l-4.6 3.2A.9.9 0 0 1 4 18.46V5.75Z",
+  plug: "M12 3v5M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8Zm5 8v5",
   book: "M4 4.5A1.5 1.5 0 0 1 5.5 3h13A1.5 1.5 0 0 1 20 4.5v15A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5v-15ZM6 5v14h12V5H6Zm2 3h8v1.5H8V8Zm0 4h8v1.5H8V12Z",
   sliders: "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6",
   puzzle:

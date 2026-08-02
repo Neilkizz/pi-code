@@ -1,5 +1,6 @@
 pub mod app_paths;
 pub mod attachments;
+pub mod connectors;
 pub mod database;
 pub mod endpoints;
 pub mod event_store;

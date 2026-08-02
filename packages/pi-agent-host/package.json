@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.83.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@pi-desktop/protocol": "file:../protocol",
     "typebox": "1.1.38"
   },

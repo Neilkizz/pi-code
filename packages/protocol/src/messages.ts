@@ -417,6 +417,46 @@ export interface EndpointRuntimeConfig {
   models: string[];
 }
 
+export interface ConnectorProfile {
+  id: string;
+  name: string;
+  transport: "stdio";
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+  approved: boolean;
+  contentHash: string;
+  credentialRef?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ConnectorDraft {
+  id?: string;
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+  token?: string;
+}
+
+export interface ConnectorRuntimeConfig {
+  id: string;
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  contentHash: string;
+}
+
+export interface ConnectorTestResult {
+  ok: boolean;
+  toolCount: number;
+  message: string;
+}
+
 export interface EndpointTestResult {
   reachable: boolean;
   authenticated: boolean;
@@ -613,6 +653,10 @@ export type DesktopToHostPayload =
   | {
       type: "host.configureExtensions";
       extensions: ExtensionRuntimeConfig[];
+    }
+  | {
+      type: "host.configureConnectors";
+      connectors: ConnectorRuntimeConfig[];
     }
   | {
       type: "task.create";

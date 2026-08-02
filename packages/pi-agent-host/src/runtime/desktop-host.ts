@@ -19,6 +19,7 @@ import {
   createHostMessage,
 } from "@pi-desktop/protocol";
 import type {
+  ConnectorRuntimeConfig,
   DesktopToHostPayload,
   DesktopTaskState,
   DesktopToHostMessage,
@@ -34,6 +35,8 @@ import type {
   TaskRuntimeProfile,
   TaskTranscriptMessage,
 } from "@pi-desktop/protocol";
+import { McpConnector } from "./connector-client.js";
+import { createConnectorToolsExtension } from "./connector-tools.js";
 import { PermissionGate } from "./permission-gate.js";
 import { BrokerClient } from "./broker-client.js";
 import { createBrokerToolsExtension } from "./broker-tools.js";
@@ -84,6 +87,7 @@ export class DesktopHost {
   private readonly endpointProviderIds = new Set<string>();
   private endpointConfigs: EndpointRuntimeConfig[] = [];
   private extensionConfigs: ExtensionRuntimeConfig[] = [];
+  private connectorConfigs: ConnectorRuntimeConfig[] = [];
 
   constructor(send: Send, options: DesktopHostOptions = {}) {
     this.send = send;
@@ -159,6 +163,8 @@ export class DesktopHost {
         return this.configureEndpoints(message.endpoints);
       case "host.configureExtensions":
         return this.configureExtensions(message.extensions);
+      case "host.configureConnectors":
+        return this.configureConnectors(message.connectors);
       case "task.create":
         return this.sessionWorker
           ? this.createTask(
@@ -319,6 +325,7 @@ export class DesktopHost {
       task: taskCommand,
       endpoints: this.endpointConfigs,
       extensions: this.extensionConfigs,
+      connectors: this.connectorConfigs,
       onEvent: (event) => this.send(event),
       onExit: (error) => {
         if (initialized && workerReference) {
@@ -510,6 +517,17 @@ export class DesktopHost {
         );
       },
     );
+    const connectorProxies = this.connectorConfigs.map((config) => ({
+      config,
+      connector: new McpConnector({
+        id: config.id,
+        name: config.name,
+        command: config.command,
+        args: config.args,
+        env: config.env,
+        cwd: join(this.appDataDir ?? ".", "connector-runtime", config.id),
+      }),
+    }));
     let resourceLoader;
     try {
       resourceLoader = await createDesktopResourceLoader({
@@ -525,6 +543,11 @@ export class DesktopHost {
           ),
           createBrokerToolsExtension({
             cwd,
+            gate: permissionGate,
+            client: brokerClient,
+          }),
+          createConnectorToolsExtension({
+            connectors: connectorProxies,
             gate: permissionGate,
             client: brokerClient,
           }),
@@ -628,7 +651,11 @@ export class DesktopHost {
     if (!this.sessionWorker) {
       await Promise.all(
         [...this.taskWorkers.values()].map((worker) =>
-          worker.configure(this.endpointConfigs, this.extensionConfigs),
+          worker.configure(
+            this.endpointConfigs,
+            this.extensionConfigs,
+            this.connectorConfigs,
+          ),
         ),
       );
       return {
@@ -701,11 +728,33 @@ export class DesktopHost {
     if (!this.sessionWorker) {
       await Promise.all(
         [...this.taskWorkers.values()].map((worker) =>
-          worker.configure(this.endpointConfigs, this.extensionConfigs),
+          worker.configure(
+            this.endpointConfigs,
+            this.extensionConfigs,
+            this.connectorConfigs,
+          ),
         ),
       );
     }
     return { configured: this.extensionConfigs.length };
+  }
+
+  private async configureConnectors(
+    connectors: ConnectorRuntimeConfig[],
+  ): Promise<{ configured: number }> {
+    this.connectorConfigs = connectors;
+    if (!this.sessionWorker) {
+      await Promise.all(
+        [...this.taskWorkers.values()].map((worker) =>
+          worker.configure(
+            this.endpointConfigs,
+            this.extensionConfigs,
+            this.connectorConfigs,
+          ),
+        ),
+      );
+    }
+    return { configured: connectors.length };
   }
 
   private async startPromptTask(

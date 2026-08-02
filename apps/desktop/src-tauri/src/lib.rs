@@ -23,6 +23,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::os::unix::fs::PermissionsExt;
 use storage::attachments::{AttachmentStore, TaskAttachment};
+use storage::connectors::{ConnectorDraft, ConnectorProfile, ConnectorStore, ConnectorTestResult};
 use storage::database::Database;
 use storage::endpoints::{
     EndpointDiscoveryDraft, EndpointDraft, EndpointProfileView, EndpointStore, EndpointTestResult,
@@ -131,6 +132,7 @@ fn agent_host_start(
     )?;
     if let Err(error) = sync_endpoint_runtime(&app, &supervisor)
         .and_then(|_| sync_extension_runtime(&app, &supervisor))
+        .and_then(|_| sync_connector_runtime(&app, &supervisor))
     {
         let _ = supervisor.stop();
         return Err(error);
@@ -1005,6 +1007,67 @@ fn parse_resource_kind(value: Option<&str>) -> Option<ResourceKind> {
 }
 
 #[tauri::command]
+fn connector_list(app: tauri::AppHandle) -> Result<Vec<ConnectorProfile>, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ConnectorStore::list(&paths.connectors_file)
+}
+
+#[tauri::command]
+fn connector_save(
+    app: tauri::AppHandle,
+    supervisor: tauri::State<'_, AgentSupervisor>,
+    draft: ConnectorDraft,
+) -> Result<ConnectorProfile, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    let saved = ConnectorStore::save(&paths, draft)?;
+    sync_connector_runtime(&app, &supervisor)?;
+    Ok(saved)
+}
+
+#[tauri::command]
+fn connector_set_enabled(
+    app: tauri::AppHandle,
+    supervisor: tauri::State<'_, AgentSupervisor>,
+    id: String,
+    enabled: bool,
+) -> Result<ConnectorProfile, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    let updated = ConnectorStore::set_enabled(&paths, &id, enabled)?;
+    sync_connector_runtime(&app, &supervisor)?;
+    Ok(updated)
+}
+
+#[tauri::command]
+fn connector_delete(
+    app: tauri::AppHandle,
+    supervisor: tauri::State<'_, AgentSupervisor>,
+    id: String,
+) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ConnectorStore::delete(&paths, &id)?;
+    sync_connector_runtime(&app, &supervisor)
+}
+
+#[tauri::command]
+fn connector_test(app: tauri::AppHandle, id: String) -> Result<ConnectorTestResult, String> {
+    let paths = storage::app_paths::AppPaths::resolve(&app).map_err(|error| error.to_string())?;
+    ConnectorStore::test(&paths, &id)
+}
+
+fn sync_connector_runtime(
+    app: &tauri::AppHandle,
+    supervisor: &AgentSupervisor,
+) -> Result<(), String> {
+    let paths = storage::app_paths::AppPaths::resolve(app).map_err(|error| error.to_string())?;
+    let connectors = ConnectorStore::runtime_configs(&paths.connectors_file)?;
+    supervisor.try_send(command_envelope(
+        "host.configureConnectors",
+        serde_json::json!({ "connectors": connectors }),
+    )?)?;
+    Ok(())
+}
+
+#[tauri::command]
 fn extension_save(
     app: tauri::AppHandle,
     supervisor: tauri::State<'_, AgentSupervisor>,
@@ -1163,7 +1226,12 @@ pub fn run() {
             resource_set_enabled,
             resource_delete,
             resource_import,
-            resource_export
+            resource_export,
+            connector_list,
+            connector_save,
+            connector_set_enabled,
+            connector_delete,
+            connector_test
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())

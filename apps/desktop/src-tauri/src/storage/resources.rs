@@ -354,6 +354,8 @@ mod tests {
             resources_file: root.join("data/resources.json"),
             agent_skills: root.join("data/agent/skills"),
             agent_prompts: root.join("data/agent/prompts"),
+            connectors_file: root.join("data/connectors.json"),
+            connector_runtime: root.join("data/connector-runtime"),
             tasks_file: root.join("data/tasks.json"),
             root: root.join("data"),
         };

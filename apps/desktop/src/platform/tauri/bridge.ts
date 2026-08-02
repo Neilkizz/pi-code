@@ -7,6 +7,9 @@ import type {
   AutomaticUpdateReport,
   DesktopBootstrap,
   DesktopToHostMessage,
+  ConnectorDraft,
+  ConnectorProfile,
+  ConnectorTestResult,
   EndpointDraft,
   EndpointDiscoveryDraft,
   EndpointProfile,
@@ -521,6 +524,29 @@ export async function importResource(
 
 export async function exportResource(id: string): Promise<void> {
   return invoke("resource_export", { id });
+}
+
+export async function listConnectors(): Promise<ConnectorProfile[]> {
+  return invoke<ConnectorProfile[]>("connector_list");
+}
+
+export async function saveConnector(draft: ConnectorDraft): Promise<ConnectorProfile> {
+  return invoke<ConnectorProfile>("connector_save", { draft });
+}
+
+export async function setConnectorEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<ConnectorProfile> {
+  return invoke<ConnectorProfile>("connector_set_enabled", { id, enabled });
+}
+
+export async function deleteConnector(id: string): Promise<void> {
+  return invoke("connector_delete", { id });
+}
+
+export async function testConnector(id: string): Promise<ConnectorTestResult> {
+  return invoke<ConnectorTestResult>("connector_test", { id });
 }
 
 export async function listenToAgentHost(options: {

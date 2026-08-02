@@ -9,6 +9,7 @@ use crate::{
     },
     storage::{
         app_paths::AppPaths,
+        connectors::ConnectorStore,
         database::Database,
         extensions::ExtensionStore,
         task_repository::TaskRepository,
@@ -330,10 +331,13 @@ fn capability_request(
         }
         "fs.write" | "fs.mkdir" => CapabilityAction::FsWrite,
         "process.shell" => CapabilityAction::ProcessExec,
-        "extension.invoke" => CapabilityAction::ExtensionInvoke,
+        "extension.invoke" | "connector.invoke" => CapabilityAction::ExtensionInvoke,
         other => return Err(format!("Unsupported Broker operation: {other}")),
     };
-    let scope = if request.operation == "extension.invoke" {
+    let scope = if matches!(
+        request.operation.as_str(),
+        "extension.invoke" | "connector.invoke"
+    ) {
         CapabilityScope::AppData
     } else {
         match task.isolation {
@@ -346,6 +350,7 @@ fn capability_request(
         .get("path")
         .or_else(|| request.arguments.get("cwd"))
         .or_else(|| request.arguments.get("extensionId"))
+        .or_else(|| request.arguments.get("connectorId"))
         .and_then(Value::as_str)
         .unwrap_or(&task.cwd)
         .to_string();
@@ -440,6 +445,7 @@ fn execute_operation(
         "search.find" => execute_find(&file_broker, request),
         "process.shell" => execute_shell(request, task, paths),
         "extension.invoke" => authorize_extension_snapshot(request, paths),
+        "connector.invoke" => authorize_connector(request, paths),
         other => Err(format!("Unsupported Broker operation: {other}")),
     }
 }
@@ -464,6 +470,27 @@ fn authorize_extension_snapshot(
     Ok(json!({
         "authorized": true,
         "extensionId": extension_id,
+        "contentHash": content_hash
+    }))
+}
+
+fn authorize_connector(request: &BrokerRequest, paths: &AppPaths) -> Result<Value, String> {
+    let connector_id = argument_string(request, "connectorId")?;
+    let content_hash = argument_string(request, "contentHash")?;
+    let tool_name = argument_string(request, "toolName")?;
+    if tool_name.len() > 256 {
+        return Err("Connector tool name is too long".into());
+    }
+    let config = ConnectorStore::runtime_configs(&paths.connectors_file)?
+        .into_iter()
+        .find(|config| config.id == connector_id)
+        .ok_or_else(|| format!("Connector is disabled or unknown: {connector_id}"))?;
+    if config.content_hash != content_hash {
+        return Err("Connector configuration changed after task startup".into());
+    }
+    Ok(json!({
+        "authorized": true,
+        "connectorId": connector_id,
         "contentHash": content_hash
     }))
 }
@@ -893,6 +920,8 @@ mod tests {
             resources_file: root.join("resources.json"),
             agent_skills: root.join("agent").join("skills"),
             agent_prompts: root.join("agent").join("prompts"),
+            connectors_file: root.join("connectors.json"),
+            connector_runtime: root.join("connector-runtime"),
             tasks_file: root.join("tasks.json"),
             root,
         }
