@@ -394,15 +394,16 @@ export function Composer({
                 aria-busy={isSubmitting}
                 title={t("Send follow-up")}
               >
-                ↑
+                <NavIcon name="arrow-up" />
               </button>
               <button
                 className="composer__send composer__send--stop"
                 type="button"
                 onClick={onAbort}
                 aria-label={t("Stop Pi")}
+                title={t("Stop Pi")}
               >
-                ■
+                <NavIcon name="stop" />
               </button>
             </>
           ) : (
@@ -415,7 +416,7 @@ export function Composer({
               aria-busy={isSubmitting}
               title={submitDisabledReason}
             >
-              ↑
+              <NavIcon name="arrow-up" />
             </button>
           )}
           {hasTask && queuedPrompts.length > 0 ? (

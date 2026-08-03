@@ -661,6 +661,25 @@ select {
   flex-shrink: 0;
 }
 
+.pane-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.pane-resizer--col::after {
+  left: -3px;
+  right: -3px;
+}
+
+.pane-resizer--row::after {
+  top: -3px;
+  bottom: -3px;
+}
+
 .pane-resizer:hover,
 .pane-resizer:focus-visible,
 .pane-resizer--active {
@@ -669,12 +688,12 @@ select {
 }
 
 .pane-resizer--col {
-  width: 4px;
+  width: 1px;
   cursor: col-resize;
 }
 
 .pane-resizer--row {
-  height: 4px;
+  height: 1px;
   cursor: row-resize;
 }
 
@@ -801,11 +820,7 @@ select {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
-}
-
-:root[data-theme="dark"] .preview-pane__body {
-  background: #161616;
+  background: var(--preview-frame-bg);
 }
 
 .preview-pane__frame {
@@ -813,15 +828,18 @@ select {
   border: 0;
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: var(--preview-frame-bg);
+  color-scheme: light dark;
 }
 
 .preview-pane__empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  background: var(--preview-empty-bg);
   color: var(--text-tertiary);
   font-size: var(--font-ui-sm);
   text-align: center;
@@ -1398,6 +1416,8 @@ select {
 
 .workspace-inspector__tabs {
   display: flex;
+  padding: 4px;
+  gap: 2px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-muted);
   overflow-x: auto;
@@ -1407,22 +1427,22 @@ select {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 5px 9px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-ui-xs);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .workspace-inspector__tabs button.is-active {
-  border-bottom-color: var(--accent);
   color: var(--text);
   font-weight: 600;
-  background: var(--surface);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-subtle);
 }
 
 .workspace-inspector__tabs button span {

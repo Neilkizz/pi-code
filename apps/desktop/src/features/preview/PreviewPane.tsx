@@ -135,9 +135,14 @@ export function PreviewPane({ taskId, onError }: PreviewPaneProps) {
           />
         ) : (
           <div className="preview-pane__empty">
-            {t(
-              "Start a local preview server to render HTML, images, and PDFs from this task.",
-            )}
+            <div className="preview-pane__empty-icon" aria-hidden="true">
+              🌐
+            </div>
+            <p>
+              {t(
+                "Start a local preview server to render HTML, images, and PDFs from this task.",
+              )}
+            </p>
           </div>
         )}
       </div>
