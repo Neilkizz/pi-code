@@ -221,6 +221,8 @@ Pi Desktop 已经从原 VS Code 扩展仓库中建立出一套可独立运行的
 
 验证证据：类名覆盖脚本把「被使用但无样式」从 **165 → 0**；`npm --prefix apps/desktop run build`（Vite 产出 CSS 29.8kB → 66.6kB）、`npm run typecheck`、`npm --prefix apps/desktop run test:unit`（105 项通过）全部通过；真实 `.app` 视觉冒烟见发布构建后截图。
 
+第二轮 UI 打磨（2026-08-03）：字重归一（620/630/650/680 非标准字重 → 600/700）；`::selection` accent 色 + WebKit 细滚动条（透明轨道 + 圆角 thumb）；为 session-link/session-tree__row/message__body/tool-card/connector/endpoint/extension/marketplace/resource/runtime 卡片 + inspector tabs + composer 控件统一加 `transition`；交互卡片悬停 `border-color: var(--line-strong)` 提升；空态统一为居中「图标区+文案」布局；运行中工具卡状态点加 `ui-pulse` 呼吸动画；focusable 卡片补 `:focus-visible` 环。`npm run typecheck`、`npm --prefix apps/desktop run build`、`npm --prefix apps/desktop run test:unit`（105 项）通过。
+
 ---
 
 ## 2. 当前运行架构
