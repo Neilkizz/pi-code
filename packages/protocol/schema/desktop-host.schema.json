@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pi-desktop.local/schema/desktop-host.schema.json",
+  "title": "Pi Desktop Host Protocol",
+  "oneOf": [
+    { "$ref": "#/$defs/hostBootstrap" },
+    { "$ref": "#/$defs/hostConfigureEndpoints" },
+    { "$ref": "#/$defs/hostConfigureExtensions" },
+    { "$ref": "#/$defs/taskCreate" },
+    { "$ref": "#/$defs/taskPrompt" },
+    { "$ref": "#/$defs/taskCommand" },
+    { "$ref": "#/$defs/taskPermissionRespond" },
+    { "$ref": "#/$defs/brokerResponse" }
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "messageId",
+        "idempotencyKey",
+        "timestamp",
+        "type"
+      ],
+      "properties": {
+        "protocolVersion": { "const": 2 },
+        "messageId": { "type": "string", "minLength": 1 },
+        "idempotencyKey": { "type": "string", "minLength": 1 },
+        "timestamp": { "type": "number", "exclusiveMinimum": 0 },
+        "type": { "type": "string" }
+      }
+    },
+    "hostBootstrap": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "host.bootstrap" },
+            "appDataDir": { "type": "string", "minLength": 1 }
+          },
+          "required": ["appDataDir"]
+        }
+      ]
+    },
+    "taskRuntimeProfile": {
+      "type": "object",
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "permissionMode": {
+          "enum": ["ask", "acceptEdits", "plan", "auto"]
+        }
+      },
+      "required": ["permissionMode"],
+      "additionalProperties": false
+    },
+    "endpointRuntimeConfig": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["openai-compatible", "anthropic-compatible", "ollama"]
+        },
+        "baseUrl": { "type": "string", "minLength": 1 },
+        "apiKey": { "type": "string" },
+        "models": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      },
+      "required": ["id", "name", "kind", "baseUrl", "models"],
+      "additionalProperties": false
+    },
+    "hostConfigureEndpoints": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "host.configureEndpoints" },
+            "endpoints": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/endpointRuntimeConfig" }
+            }
+          },
+          "required": ["endpoints"]
+        }
+      ]
+    },
+    "hostConfigureExtensions": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "host.configureExtensions" },
+            "extensions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "name": { "type": "string", "minLength": 1 },
+                  "installPath": { "type": "string", "minLength": 1 },
+                  "contentHash": { "type": "string", "minLength": 1 }
+                },
+                "required": ["id", "name", "installPath", "contentHash"]
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": ["extensions"]
+        }
+      ]
+    },
+    "taskCreate": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "task.create" },
+            "taskId": { "type": "string", "format": "uuid" },
+            "cwd": { "type": "string", "minLength": 1 },
+            "isolation": {
+              "enum": ["worktree", "currentCheckout", "readOnly"]
+            },
+            "profile": { "$ref": "#/$defs/taskRuntimeProfile" },
+            "resume": { "type": "boolean" }
+          },
+          "required": ["taskId", "cwd", "isolation", "profile", "resume"]
+        }
+      ]
+    },
+    "taskPrompt": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "task.prompt" },
+            "taskId": { "type": "string", "format": "uuid" },
+            "prompt": { "type": "string", "minLength": 1 },
+            "attachments": {
+              "type": "array",
+              "maxItems": 20,
+              "items": { "$ref": "#/$defs/taskPromptAttachment" }
+            }
+          },
+          "required": ["taskId", "prompt", "attachments"]
+        }
+      ]
+    },
+    "taskPromptAttachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "kind": { "enum": ["file", "image", "pdf"] },
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "mimeType": { "type": "string", "minLength": 1 },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 26214400
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "path",
+        "mimeType",
+        "size",
+        "sha256"
+      ]
+    },
+    "taskCommand": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "enum": ["task.abort", "task.close"] },
+            "taskId": { "type": "string", "format": "uuid" }
+          },
+          "required": ["taskId"]
+        }
+      ]
+    },
+    "taskPermissionRespond": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "task.permission.respond" },
+            "taskId": { "type": "string", "format": "uuid" },
+            "requestId": { "type": "string", "minLength": 1 },
+            "approved": { "type": "boolean" }
+          },
+          "required": ["taskId", "requestId", "approved"]
+        }
+      ]
+    },
+    "brokerResponse": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": {
+            "type": { "const": "broker.response" },
+            "taskId": { "type": "string", "format": "uuid" },
+            "requestId": { "type": "string", "minLength": 1 },
+            "ok": { "type": "boolean" },
+            "result": {},
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string", "minLength": 1 },
+                "message": { "type": "string", "minLength": 1 }
+              },
+              "required": ["code", "message"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["taskId", "requestId", "ok"]
+        }
+      ]
+    }
+  }
+}

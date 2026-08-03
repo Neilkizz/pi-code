@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf /Users/neilkizz/Documents/Project/.vscode)",
+      "Bash(mkdir -p /Users/neilkizz/Documents/Project/.vscode)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(npm run *)",
+      "Bash(npx vsce *)",
+      "Bash(git -C /Users/neilkizz/Documents/Project log --oneline -20)",
+      "Bash(git -C /Users/neilkizz/Documents/Project branch -a)",
+      "Bash(npm test *)",
+      "Bash(npm ls *)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git commit -m 'baseline: A1-A3 completed state \\(fixes, unit tests, RPC integration tests\\) *)",
+      "Bash(cd /Users/neilkizz/Documents/PROJ/Pi-Agent/apps/desktop/src-tauri && grep -n \"mod workspace\\\\|pub mod workspace\\\\|mod \\\\|use crate::workspace\\\\|workspace::\" src/lib.rs | head -30)",
+      "Read(//Users/neilkizz/Documents/PROJ/Pi-Agent/**)",
+      "Bash(cargo check *)",
+      "Bash(cargo test *)",
+      "Bash(cargo fmt *)",
+      "Bash(npm --prefix packages/protocol run build)",
+      "Bash(npx vitest *)",
+      "Read(//tmp/**)",
+      "Bash(sed -n '/Ignored nodes/,/⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯/p' /tmp/wdr.out)",
+      "Bash(npm --prefix apps/desktop run build)"
+    ]
+  }
+}

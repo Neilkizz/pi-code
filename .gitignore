@@ -7,3 +7,13 @@ out/
 .superpowers/
 *.map
 .DS_Store
+coverage/
+audit.jsonl
+*.jsonl
+apps/desktop/dist/
+apps/desktop/.runtime-cache/
+apps/desktop/artifacts/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/runtime/node/
+apps/desktop/src-tauri/runtime/pi-agent-host/
+packages/*/dist/

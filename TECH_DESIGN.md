@@ -1,8 +1,8 @@
 # Pi Code — 技术设计文档 (TECH_DESIGN)
 
-**版本:** 1.0  
+**版本:** 1.1  
 **状态:** 正式发布  
-**最后更新:** 2026-07-27  
+**最后更新:** 2026-07-29  
 
 ---
 
@@ -56,13 +56,17 @@ Pi Code 采用五层解耦架构，模块间通过类型化接口通信：
 | **PiRpcClient** | `src/rpc/PiRpcClient.ts` | JSONL RPC 协议实现，子进程管理 |
 | **RequestQueue** | `src/rpc/requestQueue.ts` | 子进程断线时请求排队 |
 | **LineReader** | `src/rpc/lineReader.ts` | 严格 LF-only JSONL 行读取器 |
-| **Chat Provider** | `src/view/ChatProvider.ts` | WebviewViewProvider，事件转发 |
+| **Chat Provider** | `src/view/ChatProvider.ts` | WebviewViewProvider，事件转发，命令分类/审计/确认 |
 | **Webview Messenger** | `src/view/WebviewMessenger.ts` | 类型化 postMessage 协议 |
 | **Session Tree** | `src/view/SessionTreeProvider.ts` | 侧栏会话列表面板 |
 | **Diff Controller** | `src/diff/DiffController.ts` | 快照式 Diff Review |
 | **Auth Service** | `src/auth/AuthService.ts` | 授权状态管理（通过 pi CLI） |
 | **Pi Terminal** | `src/terminal/PiTerminal.ts` | 终端集成和 bash 输出转发 |
 | **UI (React)** | `src/ui/*.tsx` | Webview 渲染层 |
+| **ContextBuilder** | `src/view/ContextBuilder.ts` | 构建上下文项（文件/选择/诊断）和文件建议 |
+| **GitStatusReader** | `src/view/GitStatusReader.ts` | 读取工作区 Git 状态（分支/变更数） |
+| **ChangeTracker** | `src/view/ChangeTracker.ts` | 追踪工具执行中的文件修改，生成变更摘要 |
+| **AppState** | `src/ui/AppState.ts` | useReducer 状态管理，AppAction 类型系统，reduceMessages |
 
 ---
 
@@ -165,6 +169,7 @@ Node `readline` 错误地将 U+2028（行分隔符）和 U+2029（段分隔符�
 - **请求超时:** 默认 30s，可配置
 - **请求排队:** 子进程离线时请求排队，恢复后按 FIFO 发送
 - **优雅关闭:** SIGTERM → 2s → SIGKILL
+- **环境继承:** `inheritEnv` 控制是否继承 `process.env`（默认 true），`env` 提供额外或独占环境变量
 
 ### 3.2 SessionManager
 
@@ -219,27 +224,33 @@ Pi RPC 模式下 `edit`/`write` 工具直接写入文件后才返回 diff。Diff
 ### 3.4 Webview UI (React)
 
 ```
-┌──────────────────────────────────────┐
-│         Chat Webview (React)         │
-├──────────────────────────────────────┤
-│  App.tsx                             │
-│   ├── Toolbar (模型/思考/中断)        │
-│   ├── MessageList/MessageItem         │
-│   │    ├── InlineMarkdown             │
-│   │    └── ThinkingBlock              │
-│   └── InputArea                       │
-│        ├── MentionsAutocomplete       │
-│        └── SlashCommandMenu           │
-├──────────────────────────────────────┤
-│  hooks.ts — VsCodeApi bridge          │
-│  style.css — Theme variable styling   │
-└──────────────────────────────────────┘
++-------------------------------------+
+|         Chat Webview (React)         |
++-------------------------------------+
+|  App.tsx (useReducer + dispatch)     |
+|   +--- AppState (reducer/actions)    |
+|   +--- Toolbar (model/thinking/abort) |
+|   +--- HeaderBar (session/mode)      |
+|   +--- MessageList/MessageItem        |
+|   |    +--- InlineMarkdown            |
+|   |    +--- ThinkingBlock             |
+|   |    +--- ConfirmCard (risk)        |
+|   +--- InputArea                      |
+|        +--- MentionsAutocomplete      |
+|        +--- SlashCommandMenu          |
++-------------------------------------+
+|  hooks.ts - VsCodeApi bridge          |
+|  style.css - Theme variable styling   |
++-------------------------------------+
 ```
 
-- **vsCode API:** 通过 `acquireVsCodeApi()` 获取 postMessage bridge
-- **Markdown 渲染:** 支持 heading/bold/italic/link/list/blockquote/code block
-- **Thinking 块:** 可折叠的推理过程显示
-- **主题适配:** 全部使用 VS Code theme CSS 变量
+- **useReducer (v1.1):** AppState.ts with appReducer + AppAction union replaces multiple useState calls
+- **ConfirmCard (v1.1):** Danger/sensitive command confirmation with risk badge, 30s auto-cancel
+- **ModesMenu (v1.1):** readonly/plan/manual/auto/bypass modes, shield icon for read-only
+- **vsCode API:** acquireVsCodeApi() postMessage bridge
+- **Markdown:** heading/bold/italic/link/list/blockquote/code block
+- **Thinking block:** Collapsible reasoning display
+- **Theme:** VS Code theme CSS variables throughout
 
 ### 3.5 消息传递协议
 
@@ -258,6 +269,11 @@ Pi RPC 模式下 `edit`/`write` 工具直接写入文件后才返回 diff。Diff
 - `piEvent` — Pi 事件流
 - `modelList` — 可用模型列表
 - `history` — 历史消息
+- `commandPreview` — 命令预览（风险等级+确认ID）（v1.1）
+- `fileSuggestions` — 文件建议列表
+- `gitStatus` — Git 状态摘要
+- `contextUpdate` — 上下文项更新
+- `changeSummary` — 变更摘要
 
 **Webview → Host (kind 白名单校验):**
 
@@ -265,6 +281,8 @@ Pi RPC 模式下 `edit`/`write` 工具直接写入文件后才返回 diff。Diff
 - `setModel` / `cycleModel` / `setThinkingLevel`
 - `login` / `logout`
 - `acceptDiff` / `rejectDiff`
+- `confirmCommand` / `cancelCommand` — 命令确认/取消（v1.1）
+- `requestFileSuggestions`
 
 ---
 
@@ -295,6 +313,41 @@ Pi RPC 模式下 `edit`/`write` 工具直接写入文件后才返回 diff。Diff
 - Configuration 中的路径参数均通过 VS Code API 规范化
 - 工作区根目录以外路径默认禁止访问
 - `.gitignore` 默认遵守
+
+### 4.5 权限模式（v1.1）
+
+PermissionMode 单一事实来源定义在 `src/types/permission.ts`，5 种模式：
+
+| 模式 | 行为 |
+| --- | --- |
+| `readonly` | 阻止所有写操作，仅读命令 |
+| `plan` | 只读探索，阻止写操作 |
+| `manual` | 每个命令手动确认（尤其安全文件） |
+| `auto` | 自动允许安全/敏感命令，危险命令需确认（默认） |
+| `bypass` | 隐藏模式，跳过所有安全检查 |
+
+Configuration 中从旧版 `"off"` 自动迁移到 `"readonly"`，带一次性通知。
+
+### 4.6 命令分类器（v1.1）
+
+`src/security/commandClassifier.ts` 实现最佳努力 UX 防护栏，不是安全边界：
+
+- **危险模式:** `rm -rf /`, `sudo`, `chmod 777`, `dd`, `mkfs`, `git push --force`, pipe-to-shell
+- **敏感模式:** `rm`, `mv`, `chmod`/`chown`, `docker rm`, `git reset`/`rebase`, `npm publish`/`pip install`
+- 危险→所有非 bypass 模式需确认；敏感→仅在 manual 模式需确认
+
+### 4.7 审计日志（v1.1）
+
+`src/security/auditLog.ts` 实现 JSONL 持久化审计：
+
+- 每条记录：时间戳+类型+详情+风险+授权状态
+- 内存 1000 条上限（FIFO 淘汰）
+- 磁盘文件超过 10MB 时轮转，保留 3 个存档（audit.1.jsonl..audit.3.jsonl）
+- 30 秒定期 flush 间隔
+
+### 4.8 配置脱敏（v1.1）
+
+Configuration getter 入口点使用 `sanitizeLogMessage()` 对 `executable` 和 `sessionDir` 进行脱敏处理（API Key/Token/Authorization Header 正则替换）。`defaultProvider` 和 `defaultModel` 为 schema 控制的值，不脱敏。
 
 ---
 
@@ -330,6 +383,11 @@ session.PiSession
        ├── rpc.lineReader
        └── rpc.requestQueue
 view.ChatProvider
+  ├── view.ContextBuilder (context items, file suggestions)
+  ├── view.GitStatusReader (git status)
+  ├── view.ChangeTracker (file change tracking)
+  ├── security.commandClassifier (risk classification)
+  ├── security.AuditLog (JSONL audit log)
   └── session.SessionManager
        └── session.PiSession
 diff.DiffController
@@ -340,9 +398,24 @@ auth.AuthService
 terminal.PiTerminal
   └── session.SessionManager
        └── session.PiSession
+security.commandClassifier (standalone, no deps)
+security.AuditLog (standalone, fs dependency only)
 ```
 
 无循环依赖。所有模块通过 ExtensionContext 接口注入，可测性好。
+
+### 6.1 v1.1 新增模块
+
+| 新增模块 | 职责 |
+| --- | --- |
+| `view/ContextBuilder.ts` | 从 ChatProvider 提取的上下文项和文件建议构建器 |
+| `view/GitStatusReader.ts` | 从 ChatProvider 提取的 Git 状态读取器 |
+| `view/ChangeTracker.ts` | 从 ChatProvider 提取的文件变更追踪器 |
+| `ui/AppState.ts` | useReducer 状态管理和 action 类型系统 |
+| `types/permission.ts` | PermissionMode 单一事实来源 |
+| `security/commandClassifier.ts` | 命令风险分类（UX 防护栏） |
+| `security/auditLog.ts` | JSONL 审计日志 + 轮转 |
+| `ui/ConfirmCard.tsx` | Webview 命令确认卡片 |
 
 ---
 
